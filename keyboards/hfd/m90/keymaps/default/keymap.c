@@ -15,7 +15,7 @@
  */
 
 #include QMK_KEYBOARD_H
-#include "common/bt_task.h"
+
 // clang-format off
 
 enum __layers {
