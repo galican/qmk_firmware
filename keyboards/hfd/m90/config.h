@@ -14,7 +14,7 @@
 #    define ENTRY_STOP_MODE  // 超时进入STOP Mode
 #    define BT_CABLE_PIN B8  // 充电接入时为高
 #    define BT_CHARGE_PIN B9 // 充电时为低，充满时为高
-#    define WS2812_EN_PIN B6 // WS2812电源
+#    define RGB_DRIVER_SDB_PIN A15
 #endif
 
 /* RGB Matrix */
