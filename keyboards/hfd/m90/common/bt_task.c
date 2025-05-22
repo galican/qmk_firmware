@@ -62,7 +62,7 @@ void bt_mousekey_task(void);
     {.keycode = BT_HOST2, .press_time = 0, .event_cb = long_pressed_keys_cb},
     {.keycode = BT_HOST3, .press_time = 0, .event_cb = long_pressed_keys_cb},
     {.keycode = BT_2_4G, .press_time = 0, .event_cb = long_pressed_keys_cb},
-    {.keycode = SW_OS1, .press_time = 0, .event_cb = long_pressed_keys_cb},
+    {.keycode = SW_OS, .press_time = 0, .event_cb = long_pressed_keys_cb},
     {.keycode = FACTORY_RESET, .press_time = 0, .event_cb = long_pressed_keys_cb},
     {.keycode = KEYBOARD_RESET, .press_time = 0, .event_cb = long_pressed_keys_cb},
     {.keycode = BLE_RESET, .press_time = 0, .event_cb = long_pressed_keys_cb},
@@ -327,10 +327,9 @@ void bt_switch_mode(uint8_t last_mode, uint8_t now_mode, uint8_t reset) {
     }
 }
 
-static uint32_t factory_reset_time = 0;
-static bool     factory_reset_flag;
-static bool     keyboard_reset_flag;
-static bool     ble_reset_flag;
+static uint32_t factory_reset_press_time = 0;
+static uint8_t  factory_reset_status;
+static uint8_t  factory_reset_press_cnt;
 static uint8_t  all_blink_cnt;
 static uint32_t all_blink_time;
 static RGB      all_blink_color;
@@ -388,7 +387,7 @@ static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
         case FACTORY_RESET:
         case KEYBOARD_RESET:
         case BLE_RESET:
-        case SW_OS1: // OS switch key
+        case SW_OS: // OS switch key
             break;
         default:
             return true;
@@ -419,13 +418,13 @@ static void long_pressed_keys_cb(uint16_t keycode) {
                 bt_switch_mode(dev_info.devs, DEVS_2_4G, true);
             }
         } break;
-        case SW_OS1: {
+        case SW_OS: {
             if (get_highest_layer(default_layer_state) == 0) { // WIN_BASE
-                set_single_persistent_default_layer(4);
+                set_single_persistent_default_layer(2);
                 all_blink_time  = timer_read32();
                 all_blink_cnt   = 6;
                 all_blink_color = (RGB){100, 100, 100};
-            } else if (get_highest_layer(default_layer_state) == 4) { // MAC_BASE
+            } else if (get_highest_layer(default_layer_state) == 2) { // MAC_BASE
                 set_single_persistent_default_layer(0);
                 keymap_config.no_gui = 0;
                 eeconfig_update_keymap(keymap_config.raw);
@@ -435,16 +434,28 @@ static void long_pressed_keys_cb(uint16_t keycode) {
             }
         } break;
         case FACTORY_RESET: {
-            factory_reset_flag = true;
-            factory_reset_time = timer_read32();
+            if (!factory_reset_status) {
+                factory_reset_status    = 1;
+                factory_reset_press_cnt = 1;
+                rgb_matrix_enable_noeeprom();
+                factory_reset_press_time = timer_read32();
+            }
         } break;
         case KEYBOARD_RESET: {
-            keyboard_reset_flag = true;
-            factory_reset_time  = timer_read32();
+            if (!factory_reset_status) {
+                factory_reset_status    = 2;
+                factory_reset_press_cnt = 1;
+                rgb_matrix_enable_noeeprom();
+                factory_reset_press_time = timer_read32();
+            }
         } break;
         case BLE_RESET: {
-            ble_reset_flag     = true;
-            factory_reset_time = timer_read32();
+            if (!factory_reset_status) {
+                factory_reset_status    = 3;
+                factory_reset_press_cnt = 1;
+                rgb_matrix_enable_noeeprom();
+                factory_reset_press_time = timer_read32();
+            }
         } break;
         default:
             break;
@@ -574,47 +585,59 @@ void open_rgb(void) {
 
 uint8_t indicator_status          = 2;
 uint8_t indicator_reset_last_time = false;
+uint8_t layer_save;
 
 uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
-    if (factory_reset_flag) {
-        factory_reset_flag = false;
-        uint8_t layer_save = get_highest_layer(default_layer_state);
-        eeconfig_init();
-        eeconfig_update_rgb_matrix_default();
-        set_single_persistent_default_layer(layer_save);
-        dev_info.ind_brightness = RGB_MATRIX_DEFAULT_VAL;
-        dev_info.ind_color      = RGB_MATRIX_DEFAULT_HUE;
-        eeconfig_update_user(dev_info.raw);
-        keymap_config.no_gui = 0;
-        eeconfig_update_keymap(keymap_config.raw);
-        factory_reset_time = timer_read32();
-        return false;
-    }
-    if (factory_reset_time && timer_elapsed32(factory_reset_time) < 3000) {
+    if (factory_reset_status) {
+        if (timer_elapsed32(factory_reset_press_time) >= factory_reset_press_cnt * 500) {
+            factory_reset_press_cnt++;
+        }
+        if (factory_reset_press_cnt >= 7) {
+            switch (factory_reset_status) {
+                case 1: // factory reset
+                    eeconfig_init();
+                    eeconfig_update_rgb_matrix_default();
+                    dev_info.ind_brightness = RGB_MATRIX_DEFAULT_VAL;
+                    dev_info.ind_color      = RGB_MATRIX_DEFAULT_HUE;
+                    eeconfig_update_user(dev_info.raw);
+                    keymap_config.no_gui = 0;
+                    eeconfig_update_keymap(keymap_config.raw);
+                    if (dev_info.devs != DEVS_2_4G && dev_info.devs != DEVS_USB) {
+                        bts_send_vendor(v_clear);
+                    }
+                    break;
+                case 2: // keyboard reset
+                    layer_save = get_highest_layer(default_layer_state);
+                    eeconfig_init();
+                    set_single_persistent_default_layer(layer_save);
+                    break;
+                case 3: // ble reset
+                    if (dev_info.devs != DEVS_2_4G && dev_info.devs != DEVS_USB) {
+                        bts_send_vendor(v_clear);
+                    }
+                    break;
+                default:
+                    break;
+            }
+            factory_reset_press_cnt  = 0;
+            factory_reset_status     = 0;
+            factory_reset_press_time = 0;
+        }
         rgb_matrix_set_color_all(0, 0, 0);
-        rgb_matrix_set_color(30, 100, 0, 0);
-    }
-
-    if (keyboard_reset_flag) {
-        keyboard_reset_flag = false;
-        eeconfig_init();
-        factory_reset_time = timer_read32();
+        switch (factory_reset_status) {
+            case 1: // factory reset
+                rgb_matrix_set_color(30, 100, 0, 0);
+                break;
+            case 2: // keyboard reset
+                rgb_matrix_set_color(26, 100, 0, 0);
+                break;
+            case 3: // ble reset
+                rgb_matrix_set_color(44, 100, 0, 0);
+                break;
+            default:
+                break;
+        }
         return false;
-    }
-    if (factory_reset_time && timer_elapsed32(factory_reset_time) < 3000) {
-        rgb_matrix_set_color_all(0, 0, 0);
-        rgb_matrix_set_color(26, 100, 0, 0);
-    }
-
-    if (ble_reset_flag) {
-        ble_reset_flag = false;
-        bts_send_vendor(v_clear);
-        factory_reset_time = timer_read32();
-        return false;
-    }
-    if (factory_reset_time && timer_elapsed32(factory_reset_time) < 3000) {
-        rgb_matrix_set_color_all(0, 0, 0);
-        rgb_matrix_set_color(44, 100, 0, 0);
     }
 
     /*************************************************************************************/
@@ -645,36 +668,25 @@ uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
 
 #if defined(BT_CABLE_PIN) && defined(BT_CHARGE_PIN)
     // 充电接入
-    // if (!dev_info.Charge_flag) {
-    static uint32_t charging_time;
-    static uint32_t charg_full_time;
     if (!readPin(BT_CABLE_PIN)) {
         if (!readPin(BT_CHARGE_PIN)) {
             // 正在充电
-            if (timer_elapsed32(charging_time) >= 2000) {
-                if (dev_info.devs != DEVS_USB) {
-                    if (timer_elapsed32(charging_time) <= 12000) {
-                        rgb_matrix_set_color(0, 100, 0, 0);
-                    }
-                }
+            if (dev_info.devs != DEVS_USB) {
+                rgb_matrix_set_color(0, 100, 0, 0);
             }
-            charg_full_time = timer_read32();
         } else {
             // 充满
-            if ((timer_elapsed32(charg_full_time) <= 12000) && (timer_elapsed32(charg_full_time) >= 2000)) {
-                rgb_matrix_set_color(0, 0, 100, 0);
-            }
-            charging_time = timer_read32();
+            // rgb_matrix_set_color(0, 0, 100, 0);
         }
     } else {
         if (dev_info.devs != DEVS_USB) {
             if (bts_info.bt_info.low_vol || bts_info.bt_info.low_vol_offed) {
                 rgb_matrix_set_color_all(0, 0, 0);
             }
-            if ((bts_info.bt_info.low_vol) && !readPin(BT_CABLE_PIN)) {
+            if (bts_info.bt_info.low_vol) {
                 static bool     Low_power_bink;
                 static uint16_t Low_power_time;
-                if (timer_elapsed(Low_power_time) >= 1000) {
+                if (timer_elapsed(Low_power_time) >= 200) {
                     Low_power_bink = !Low_power_bink;
                     Low_power_time = timer_read32();
                 }
@@ -685,7 +697,7 @@ uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
                 }
             }
             extern bool low_vol_offed_sleep;
-            if ((bts_info.bt_info.low_vol_offed) && !readPin(BT_CABLE_PIN)) {
+            if (bts_info.bt_info.low_vol_offed) {
                 low_vol_offed_sleep = true;
                 kb_sleep_flag       = true;
             } else {
@@ -715,11 +727,11 @@ uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
         }
 
         // FN 按下时显示当前设备状态
-        // if (get_highest_layer(default_layer_state | layer_state) == 1) {
-        //     rgb_matrix_set_color(rgb_index_table[dev_info.devs], RGB_WHITE);
-        // } else if (get_highest_layer(default_layer_state | layer_state) == 3) {
-        //     rgb_matrix_set_color(rgb_index_table[dev_info.devs], RGB_WHITE);
-        // }
+        if (get_highest_layer(default_layer_state | layer_state) == 1) {
+            rgb_matrix_set_color(rgb_index_table[dev_info.devs], RGB_WHITE);
+        } else if (get_highest_layer(default_layer_state | layer_state) == 3) {
+            rgb_matrix_set_color(rgb_index_table[dev_info.devs], RGB_WHITE);
+        }
 
         switch (indicator_status) {
             case 1: { // 闪烁模式 5Hz 重置
@@ -764,7 +776,10 @@ uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
                     indicator_status = 3;
                     break;
                 }
-
+                if (bts_info.bt_info.come_back_err) {
+                    last_time        = timer_read32();
+                    indicator_status = 1;
+                }
                 /* 超时120s退出 */
                 if (timer_elapsed32(last_total_time) >= (120 * 1000)) {
                     indicator_status = 0;
@@ -799,7 +814,7 @@ uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
                 }
                 return true;
         }
-
+        rgb_matrix_set_color_all(0, 0, 0);
         rgb_matrix_set_color(rgb_index, rgb.r, rgb.g, rgb.b);
     } else {
         static uint16_t USB_blink_time;

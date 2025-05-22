@@ -115,69 +115,27 @@ bool led_inited = false;
 
 void led_config_all(void) {
     if (!led_inited) {
-        // Set our LED pins as output
-        // setPinOutput(A14);
-        // if (dev_info.devs == DEVS_USB) {
-        //     writePinLow(A14);
-        // } else {
-        //     writePinHigh(A14);
-        // }
+        setPinOutputPushPull(RGB_DRIVER_SDB_PIN);
+        writePinHigh(RGB_DRIVER_SDB_PIN);
         led_inited = true;
     }
 }
 
 void led_deconfig_all(void) {
     if (led_inited) {
-        // Set our LED pins as input
-        // setPinInput(A14);
-        // writePinLow(A14);
-        // writePinHigh(A14);
+        setPinOutputOpenDrain(RGB_DRIVER_SDB_PIN);
         led_inited = false;
     }
 }
-// void suspend_power_down_user(void) {
-//     // code will run multiple times while keyboard is suspended
-//     led_deconfig_all();
-// }
 
-// void suspend_wakeup_init_user(void) {
-//     // code will run on keyboard wakeup
-//     // led_config_all();
-//     led_config_all();
-// }
-bool via_command_kb(uint8_t *data, uint8_t length) {
-    uint8_t *command_id = &(data[0]);
-    switch (*command_id) {
-        case 0x07: {
-            if (data[1] == 0x03 && data[2] == 0x02 && data[3] == 0x00) {
-                switch (rgb_matrix_get_flags()) {
-                    case LED_FLAG_ALL: {
-                        rgb_matrix_set_flags(LED_FLAG_NONE);
-                        rgb_matrix_set_color_all(0, 0, 0);
-                        // rgb_status_save = 0;
-                    } break;
-                    default: {
-                        rgb_matrix_set_flags(LED_FLAG_ALL);
-                        // rgb_status_save = 1;
-                    } break;
-                }
-                // return false;
-            } else if (data[1] == 0x03 && data[2] == 0x02 && data[3] != 0x00) {
-                if (rgb_matrix_get_flags() != LED_FLAG_ALL) rgb_matrix_set_flags(LED_FLAG_ALL);
-            }
-            return false;
-        }
-        default:
-            break;
-    }
-    return false;
+void suspend_power_down_user(void) {
+    // code will run multiple times while keyboard is suspended
+    led_deconfig_all();
 }
 
-void set_led_state(void) {
-    if (led_inited) {
-        // writePin(D2, keymap_config.no_gui);
-        // writePin(C11, get_highest_layer(default_layer_state) == 2);
-    }
+void suspend_wakeup_init_user(void) {
+    // code will run on keyboard wakeup
+    led_config_all();
 }
 
 bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
@@ -234,7 +192,6 @@ void eeconfig_init_kb(void) {
 void matrix_scan_kb(void) {
 #ifdef BT_MODE_ENABLE
     bt_task();
-    set_led_state();
 #endif
     matrix_scan_user();
 }

@@ -1,7 +1,7 @@
 {
-    "name": "Feizao 75",
+    "name": "M90",
     "vendorId": "0xFFFE",
-    "productId": "0x00A3",
+    "productId": "0x00AC",
     "keycodes": ["qmk_lighting"],
     "menus": [
       {
@@ -60,13 +60,24 @@
         ]
       }
     ],
-    "matrix": { "rows": 6, "cols": 15 },
+    "matrix": { "rows": 6, "cols": 18 },
     "customKeycodes":[
         {"name":"BT_HOST1","title":"BT_HOST1","shortName":"BT_HOST1"},
         {"name":"BT_HOST2","title":"BT_HOST2","shortName":"BT_HOST2"},
         {"name":"BT_HOST3","title":"BT_HOST3","shortName":"BT_HOST3"},
-        {"name":"BT_2_4G","title": "BT_2_4G","shortName":"BT_2_4G"},
-        {"name":"BT_USB","title":  "BT_USB","shortName":"BT_USB"}
+        {"name":"BT_2_4G","title":"BT_2_4G","shortName":"BT_2_4G"},
+        {"name":"BT_USB","title":"BT_USB","shortName":"BT_USB"},
+        {"name":"SW_OS","title":"Switch os between window and ios","shortName":"SW_OS"},
+        {"name":"INDICATOR_COLOR","title":"Change the color of LED indicator","shortName":"IND_COLOR"},
+        {"name":"INDICATOR_BRIGHTNESS_UP","title":"Increase the brightness level of LED indicator","shortName":"IND_VAD"},
+        {"name":"INDICATOR_BRIGHTNESS_DOWN","title":"Decrease the brightness level of LED indicator","shortName":"IND_VAD"},
+        {"name":"KEYBOARD_SLEEP","title":"Toggle the sleep state of keyboard","shortName":"KEY_SLEEP"},
+        {"name":"ECO","title":"Toggle the ON/OFF state of LED indicator","shortName":"ECO"},
+        {"name":"FACTORY_RESET","title":"Reset the PCB setting","shortName":"FACTORY"},
+        {"name":"KEYBOARD_RESET","title":"Reset the keyboard resetting","shortName":"KEY_RESET"},
+        {"name":"BLE_RESET","title":"Reset the Bluetooth setting","shortName":"BT_RESET"},
+        {"name":"FN_FUN","title":"Swap the function keys","shortName":"FN_FUN"},
+        {"name":"FN_MENU","title":"Swap the menu and alt","shortName":"FN_MENU"}
       ],
     "layouts": {
       "keymap":[
@@ -76,32 +87,29 @@
           },
           "0,0",
           {
-            "x": 0.25,
+            "x": 1,
             "c": "#aaaaaa"
           },
-          "0,1",
           "0,2",
           "0,3",
           "0,4",
-          {
-            "x": 0.25
-          },
           "0,5",
+          {
+            "x": 0.5,
+            "c": "#cccccc"
+          },
           "0,6",
           "0,7",
           "0,8",
-          {
-            "x": 0.25
-          },
           "0,9",
+          {
+            "x": 0.5,
+            "c": "#aaaaaa"
+          },
           "0,10",
           "0,11",
           "0,12",
-          {
-            "x": 0.25
-          },
-          "0,13",
-          "0,14"
+          "0,13"
         ],
         [
           {
@@ -126,7 +134,12 @@
             "w": 2
           },
           "1,13",
-          "1,14"
+         {
+            "x": 0.25
+         },
+          "1,15",
+          "1,16",
+          "1,17"
         ],
         [
           {
@@ -149,13 +162,16 @@
           "2,11",
           "2,12",
           {
-            "w": 1.5
+            "w": 1.5,
+            "c": "#aaaaaa"
           },
           "2,13",
           {
-            "c": "#aaaaaa"
+            "x": 0.25
           },
-          "2,14"
+          "2,15",
+          "2,16",
+          "2,17"
         ],
         [
           {
@@ -180,15 +196,12 @@
             "c": "#777777",
             "w": 2.25
           },
-          "3,13",
-          {
-            "c": "#aaaaaa"
-          },
-          "3,14"
+          "3,13"
         ],
         [
           {
-            "w": 2.25
+            "w": 2.25,
+            "c": "#aaaaaa"
           },
           "4,0",
           {
@@ -206,17 +219,14 @@
           "4,10",
           {
             "c": "#aaaaaa",
-            "w": 1.75
-          },
-          "4,11",
-          {
-            "c": "#777777"
+            "w": 2.75
           },
           "4,13",
           {
-            "c": "#aaaaaa"
+            "x": 1.25,
+            "c": "#777777"
           },
-          "4,14"
+          "4,16"
         ],
         [
           {
@@ -233,7 +243,7 @@
           },
           "5,2",
           {
-            "c": "#777777",
+            "c": "#cccccc",
             "w": 6.25
           },
           "5,5",
@@ -241,18 +251,26 @@
             "c": "#aaaaaa",
             "w": 1.25
           },
+          "5,9",
+          {
+            "w": 1.25
+          },
           "5,10",
           {
             "w": 1.25
           },
-          "5,11",
+          "5,12",
           {
-            "x": 0.5,
+            "w": 1.25
+          },
+          "5,13",
+          {
+            "x": 0.25,
             "c": "#777777"
           },
-          "5,12",
-          "5,13",
-          "5,14"
+          "5,15",
+          "5,16",
+          "5,17"
         ]
       ]
     }
