@@ -1,8 +1,8 @@
 {
     "manufacturer": " ",
-    "keyboard_name": "M90",
+    "keyboard_name": "Alchemie TKL",
     "maintainer": "jonylee@hfd",
-    "url": "",
+    "url": " ",
     "processor": "WB32FQ95",
     "bootloader": "wb32-dfu",
     "usb": {
@@ -26,8 +26,8 @@
     "rgb_matrix": {
         "driver": "is31fl3733",
         "led_count": 87,
-        "max_brightness": 160,
-        "val_steps": 40,
+        "max_brightness": 180,
+        "val_steps": 36,
         "speed_steps": 64,
         "sleep": true,
         "animations": {

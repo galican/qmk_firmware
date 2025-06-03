@@ -217,6 +217,7 @@ void keyboard_post_init_kb(void) {
     // This is called after the keyboard matrix is initialized
     // and the RGB matrix is initialized.
     // It can be used to set up additional features or configurations.
+    // dev_info.raw = eeconfig_read_user();
     rgb_info.raw = eeconfig_read_kb();
     if (!rgb_info.rgb_matrix_effect) {
         rgb_matrix_set_flags(LED_FLAG_NONE);
@@ -228,11 +229,11 @@ void keyboard_post_init_kb(void) {
 
 void eeconfig_init_kb(void) {
     dev_info.ind_brightness = RGB_MATRIX_DEFAULT_VAL;
-    dev_info.ind_color      = 170;
+    // dev_info.ind_color      = 170;
     eeconfig_update_user(dev_info.raw);
 
-    keymap_config.nkro = false;
-    eeconfig_update_keymap(keymap_config.raw);
+    // keymap_config.nkro = false;
+    // eeconfig_update_keymap(&keymap_config);
 
     // eeconfig_update_kb(rgb_info.raw);
     rgb_info.rgb_matrix_effect = 0;

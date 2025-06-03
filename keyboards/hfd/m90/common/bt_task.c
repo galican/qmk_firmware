@@ -11,7 +11,6 @@
 #include "common/bts_lib.h"
 #include "config.h"
 #include "gpio.h"
-#include "info_config.h"
 #include "m90.h"
 #include "quantum.h"
 #include "rgb_matrix.h"
@@ -27,6 +26,8 @@
 #    define BT_DEBUG_INFO(fmt, ...)
 #endif
 
+extern keymap_config_t keymap_config;
+
 typedef struct {
     uint32_t press_time;
     uint16_t keycode;
@@ -36,7 +37,7 @@ typedef struct {
 uint32_t   bt_init_time = 0;
 dev_info_t dev_info     = {0};
 bts_info_t bts_info     = {
-        .bt_name        = {"M90 BT$", "M90 BT$", "M90 BT$"},
+        .bt_name        = {"Alchemie TKL_$", "Alchemie TKL_$", "Alchemie TKL_$"},
         .uart_init      = uart_init,
         .uart_read      = uart_read,
         .uart_transmit  = uart_transmit,
@@ -469,7 +470,7 @@ static void long_pressed_keys_cb(uint16_t keycode) {
             } else if (get_highest_layer(default_layer_state) == 2) { // MAC_BASE
                 set_single_persistent_default_layer(0);
                 keymap_config.no_gui = 0;
-                eeconfig_update_keymap(keymap_config.raw);
+                eeconfig_update_keymap(&keymap_config);
                 single_blink_time  = timer_read32();
                 single_blink_cnt   = 3;
                 single_blink_index = 68;
@@ -652,7 +653,7 @@ uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
                     dev_info.ind_color      = 170;
                     eeconfig_update_user(dev_info.raw);
                     keymap_config.no_gui = 0;
-                    eeconfig_update_keymap(keymap_config.raw);
+                    eeconfig_update_keymap(&keymap_config);
                     rgb_info.rgb_matrix_effect = 0;
                     eeconfig_update_kb(rgb_info.raw);
                     if (dev_info.devs != DEVS_2_4G && dev_info.devs != DEVS_USB) {
