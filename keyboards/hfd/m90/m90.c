@@ -150,44 +150,16 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case RGB_TOG:
             if (record->event.pressed) {
-                switch (rgb_matrix_get_flags()) {
-                    case LED_FLAG_ALL: {
-                        rgb_matrix_set_flags(LED_FLAG_NONE);
-                        rgb_matrix_set_color_all(0, 0, 0);
-                    } break;
-                    default: {
-                        rgb_matrix_set_flags(LED_FLAG_ALL);
-                    } break;
+                rgb_info.rgb_tog_flag = ~rgb_info.rgb_tog_flag;
+                if (!rgb_info.rgb_tog_flag) {
+                    rgb_matrix_set_flags(LED_FLAG_NONE);
+                    rgb_matrix_set_color_all(0, 0, 0);
+                } else {
+                    rgb_matrix_set_flags(LED_FLAG_ALL);
                 }
+                eeconfig_update_kb(rgb_info.raw);
             }
             return false;
-        // case RGB_HUI: {
-        //     if (record->event.pressed) {
-        //         if (rgb_info.rgb_matrix_color_index >= HUE_SET_NUM) {
-        //             rgb_info.rgb_matrix_color_index = 0;
-        //         } else {
-        //             rgb_info.rgb_matrix_color_index++;
-        //         }
-        //         eeconfig_update_kb(rgb_info.raw);
-        //         rgb_matrix_sethsv(HUE_SET_TABLE[rgb_info.rgb_matrix_color_index][0], HUE_SET_TABLE[rgb_info.rgb_matrix_color_index][1], rgb_matrix_config.hsv.v);
-        //     }
-        //     return false;
-        // }
-        case RGB_MOD:
-        case RGB_RMOD: {
-            if (record->event.pressed) {
-                if (!rgb_info.rgb_matrix_effect) {
-                    rgb_info.rgb_matrix_effect = rgb_matrix_get_mode();
-                    rgb_matrix_set_flags(LED_FLAG_ALL);
-                    rgb_matrix_mode(rgb_info.rgb_matrix_effect);
-                    return false;
-                } else {
-                    rgb_info.rgb_matrix_effect = rgb_matrix_get_mode();
-                    eeconfig_update_kb(rgb_info.raw);
-                }
-            }
-            return true;
-        }
         default:
             break;
     }
@@ -219,7 +191,7 @@ void keyboard_post_init_kb(void) {
     // It can be used to set up additional features or configurations.
     // dev_info.raw = eeconfig_read_user();
     rgb_info.raw = eeconfig_read_kb();
-    if (!rgb_info.rgb_matrix_effect) {
+    if (!rgb_info.rgb_tog_flag) {
         rgb_matrix_set_flags(LED_FLAG_NONE);
         rgb_matrix_set_color_all(0, 0, 0);
     }
@@ -228,21 +200,17 @@ void keyboard_post_init_kb(void) {
 }
 
 void eeconfig_init_kb(void) {
-    dev_info.ind_brightness = RGB_MATRIX_DEFAULT_VAL;
-    // dev_info.ind_color      = 170;
+    dev_info.sleep_mode = 1;
     eeconfig_update_user(dev_info.raw);
+
+    rgb_info.ind_brightness = RGB_MATRIX_DEFAULT_VAL;
+    eeconfig_update_kb(rgb_info.raw);
 
     // keymap_config.nkro = false;
     // eeconfig_update_keymap(&keymap_config);
-
-    // eeconfig_update_kb(rgb_info.raw);
-    rgb_info.rgb_matrix_effect = 0;
+    rgb_matrix_config.hsv.h = 170;
+    rgb_info.smd_color_index = 0;
     eeconfig_update_kb(rgb_info.raw);
-    // rgb_info.rgb_matrix_color_index = 1;
-    // rgb_matrix_sethsv(HUE_SET_TABLE[rgb_info.rgb_matrix_color_index][0], HUE_SET_TABLE[rgb_info.rgb_matrix_color_index][1], rgb_matrix_config.hsv.v);
-
-    // rgb_matrix_set_flags(LED_FLAG_NONE);
-    // rgb_matrix_set_color_all(0, 0, 0);
 
     eeconfig_init_user();
 }
@@ -266,15 +234,12 @@ void housekeeping_task_kb(void) {
 }
 
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
-    if (rgb_matrix_indicators_advanced_user(led_min, led_max) != true) {
-        return false;
+    if (!rgb_info.rgb_tog_flag) {
+        rgb_matrix_set_color_all(0, 0, 0);
     }
 
-    if (!rgb_info.rgb_matrix_effect) {
-        rgb_matrix_set_flags(LED_FLAG_NONE);
-        for (uint8_t i = led_min; i < (led_max - 3); i++) {
-            rgb_matrix_set_color(i, 0, 0, 0);
-        }
+    if (rgb_matrix_indicators_advanced_user(led_min, led_max) != true) {
+        return false;
     }
 
 #ifdef BT_MODE_ENABLE

@@ -13,8 +13,7 @@ enum bt_keycodes {
     BT_USB,
     BT_VOL,
     SW_OS,
-    INDICATOR_HUI_INCREASE,
-    INDICATOR_HUI_DECREASE,
+    INDICATOR_HUE,
     INDICATOR_BRIGHTNESS,
     ECO,
     FACTORY_RESET,
@@ -29,8 +28,10 @@ enum bt_keycodes {
 typedef union {
     uint32_t raw;
     struct {
-        uint8_t rgb_matrix_effect;
-        // uint8_t rgb_matrix_color_index;
+        uint8_t rgb_tog_flag; // RGB toggle flag
+        uint8_t ind_color_index;
+        uint8_t ind_brightness;
+        uint8_t smd_color_index;
     };
 } rgb_info_t;
 

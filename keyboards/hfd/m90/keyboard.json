@@ -8,7 +8,7 @@
     "usb": {
         "vid": "0xFFFE",
         "pid": "0x00AC",
-        "device_version": "1.0.0",
+        "device_version": "1.0.1",
         "suspend_wakeup_delay": 1000
     },
     "diode_direction": "ROW2COL",
@@ -77,12 +77,12 @@
             { "flags": 4, "matrix": [1,10], "x": 130, "y": 17},
             { "flags": 4, "matrix": [1,11], "x": 143, "y": 17},
             { "flags": 4, "matrix": [1,12], "x": 156, "y": 17},
-            { "flags": 8, "matrix": [1,13], "x": 175, "y": 17},
+            { "flags": 4, "matrix": [1,13], "x": 175, "y": 17},
             { "flags": 1, "matrix": [1,15], "x": 197, "y": 17},
             { "flags": 1, "matrix": [1,16], "x": 211, "y": 17},
             { "flags": 1, "matrix": [1,17], "x": 224, "y": 17},
 
-            { "flags": 8, "matrix": [2,0],  "x":   3, "y": 29},
+            { "flags": 1, "matrix": [2,0],  "x":   3, "y": 29},
             { "flags": 4, "matrix": [2,1],  "x":  20, "y": 29},
             { "flags": 4, "matrix": [2,2],  "x":  33, "y": 29},
             { "flags": 4, "matrix": [2,3],  "x":  46, "y": 29},
@@ -96,7 +96,7 @@
             { "flags": 4, "matrix": [2,11], "x": 149, "y": 29},
             { "flags": 4, "matrix": [2,12], "x": 162, "y": 29},
             { "flags": 4, "matrix": [2,13], "x": 178, "y": 29},
-            { "flags": 8, "matrix": [2,15], "x": 197, "y": 29},
+            { "flags": 1, "matrix": [2,15], "x": 197, "y": 29},
             { "flags": 1, "matrix": [2,16], "x": 211, "y": 29},
             { "flags": 1, "matrix": [2,17], "x": 224, "y": 29},
 
