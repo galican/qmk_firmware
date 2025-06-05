@@ -15,11 +15,11 @@
 #    define BT_CABLE_PIN B8  // 充电接入时为高
 #    define BT_CHARGE_PIN B9 // 充电时为低，充满时为高
 #    define RGB_DRIVER_SDB_PIN A15
-#    define BT_HOST1_INDEX 14
-#    define BT_HOST2_INDEX 15
-#    define BT_HOST3_INDEX 16
-#    define BT_2_4G_INDEX 17
-#    define BT_USB_INDEX 18
+#    define BT_HOST1_INDEX 17
+#    define BT_HOST2_INDEX 18
+#    define BT_HOST3_INDEX 19
+#    define BT_2_4G_INDEX 20
+#    define BT_USB_INDEX 21
 #endif
 
 /* RGB Matrix */
@@ -50,3 +50,7 @@
 
 // #define DYNAMIC_KEYMAP_LAYER_COUNT 8
 // #define DYNAMIC_KEYMAP_ENABLE
+
+#define NUM_LOCK_IND_INDEX 104
+#define CAPS_LOCK_IND_INDEX 105
+#define SCROLL_LOCK_IND_INDEX 106

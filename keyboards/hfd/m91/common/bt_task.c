@@ -11,7 +11,7 @@
 #include "common/bts_lib.h"
 #include "config.h"
 #include "gpio.h"
-#include "m90.h"
+#include "m91.h"
 #include "quantum.h"
 #include "rgb_matrix.h"
 #include "uart.h"

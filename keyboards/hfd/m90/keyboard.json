@@ -29,7 +29,7 @@
         "max_brightness": 180,
         "val_steps": 36,
         "speed_steps": 64,
-        "sleep": true,
+        "sleep": false,
         "animations": {
             "solid_color": true,
             "breathing": true,
