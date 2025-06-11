@@ -20,6 +20,7 @@
 #    define BT_HOST3_INDEX 16
 #    define BT_2_4G_INDEX 17
 #    define BT_USB_INDEX 18
+#    define BT_MODE_SW_PIN B10
 #endif
 
 /* RGB Matrix */
@@ -48,5 +49,9 @@
 #define RGB_MATRIX_FRAMEBUFFER_EFFECTS
 #define RGB_MATRIX_KEYPRESSES
 
-// #define DYNAMIC_KEYMAP_LAYER_COUNT 8
-// #define DYNAMIC_KEYMAP_ENABLE
+#define RGB_MATRIX_DEFAULT_VAL 144
+#define RGB_MATRIX_DEFAULT_SPD 192
+
+#ifdef DIP_SWITCH_ENABLE
+#    define DIP_SWITCH_PINS {B10}
+#endif

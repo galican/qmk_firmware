@@ -147,19 +147,20 @@ void led_config_all(void) {
 
 void led_deconfig_all(void) {
     if (led_inited) {
-        setPinOutputOpenDrain(RGB_DRIVER_SDB_PIN);
+        setPinOutputPushPull(RGB_DRIVER_SDB_PIN);
+        writePinLow(RGB_DRIVER_SDB_PIN);
         led_inited = false;
     }
 }
 
 void suspend_power_down_user(void) {
     // code will run multiple times while keyboard is suspended
-    // led_deconfig_all();
+    led_deconfig_all();
 }
 
 void suspend_wakeup_init_user(void) {
     // code will run on keyboard wakeup
-    // led_config_all();
+    led_config_all();
 }
 
 bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
@@ -169,14 +170,34 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case RGB_TOG:
             if (record->event.pressed) {
-                rgb_info.rgb_tog_flag = ~rgb_info.rgb_tog_flag;
-                if (!rgb_info.rgb_tog_flag) {
-                    rgb_matrix_set_flags(LED_FLAG_NONE);
-                    rgb_matrix_set_color_all(0, 0, 0);
+                // rgb_info.rgb_tog_flag = ~rgb_info.rgb_tog_flag;
+                // if (!rgb_info.rgb_tog_flag) {
+                if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
+                    rgb_matrix_mode(RGB_MATRIX_DEFAULT_MODE);
                 } else {
-                    rgb_matrix_set_flags(LED_FLAG_ALL);
+                    if (rgb_matrix_get_flags() == LED_FLAG_ALL) {
+                        rgb_matrix_set_flags(LED_FLAG_NONE);
+                        rgb_matrix_set_color_all(0, 0, 0);
+                    } else {
+                        rgb_matrix_set_flags(LED_FLAG_ALL);
+                    }
                 }
-                eeconfig_update_kb(rgb_info.raw);
+            }
+            return false;
+        case RGB_MOD:
+            if (record->event.pressed) {
+                rgb_matrix_step();
+                if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
+                    rgb_matrix_step();
+                }
+            }
+            return false;
+        case RGB_RMOD:
+            if (record->event.pressed) {
+                rgb_matrix_step_reverse();
+                if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
+                    rgb_matrix_step_reverse();
+                }
             }
             return false;
         default:
@@ -208,12 +229,8 @@ void keyboard_post_init_kb(void) {
     // This is called after the keyboard matrix is initialized
     // and the RGB matrix is initialized.
     // It can be used to set up additional features or configurations.
-    // dev_info.raw = eeconfig_read_user();
+
     rgb_info.raw = eeconfig_read_kb();
-    if (!rgb_info.rgb_tog_flag) {
-        rgb_matrix_set_flags(LED_FLAG_NONE);
-        rgb_matrix_set_color_all(0, 0, 0);
-    }
 
     keyboard_post_init_user();
 }
@@ -222,14 +239,17 @@ void eeconfig_init_kb(void) {
     dev_info.sleep_mode = 1;
     eeconfig_update_user(dev_info.raw);
 
-    rgb_info.ind_brightness = RGB_MATRIX_DEFAULT_VAL;
+    // rgb_info.ind_brightness = RGB_MATRIX_DEFAULT_VAL;
+    rgb_info.ind_brightness = RGB_MATRIX_VAL_STEP * 3;
     eeconfig_update_kb(rgb_info.raw);
 
     // keymap_config.nkro = false;
     // eeconfig_update_keymap(&keymap_config);
-    rgb_matrix_config.hsv.h = 170;
+    rgb_matrix_config.hsv.h  = 170;
     rgb_info.smd_color_index = 0;
     eeconfig_update_kb(rgb_info.raw);
+
+    rgb_matrix_mode(RGB_MATRIX_CUSTOM_EFFECT_OFF);
 
     eeconfig_init_user();
 }
@@ -253,10 +273,6 @@ void housekeeping_task_kb(void) {
 }
 
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
-    if (!rgb_info.rgb_tog_flag) {
-        rgb_matrix_set_color_all(0, 0, 0);
-    }
-
     if (rgb_matrix_indicators_advanced_user(led_min, led_max) != true) {
         return false;
     }
@@ -269,7 +285,29 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
 
     // GUI lock red
     if (keymap_config.no_gui) {
-        rgb_matrix_set_color(74, 160, 160, 160);
+        rgb_matrix_set_color(92, 160, 160, 160);
     }
     return true;
 }
+
+#ifdef DIP_SWITCH_ENABLE
+bool dip_switch_update_kb(uint8_t index, bool active) {
+    if (!dip_switch_update_user(index, active)) {
+        return false;
+    }
+
+    if (index == 0) {
+        if (active) {
+            if (dev_info.devs == DEVS_USB) {
+                bt_switch_mode(DEVS_USB, dev_info.devs, false); // wireless mode
+            }
+        } else {
+            if (dev_info.devs != DEVS_USB) {
+                bt_switch_mode(dev_info.devs, DEVS_USB, false); // usb mode
+            }
+        }
+    }
+
+    return true;
+}
+#endif // DIP_SWITCH_ENABLE

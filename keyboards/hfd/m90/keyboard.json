@@ -8,16 +8,19 @@
     "usb": {
         "vid": "0xFFFE",
         "pid": "0x00AC",
-        "device_version": "1.0.1",
+        "device_version": "1.0.2",
         "suspend_wakeup_delay": 1000
     },
     "diode_direction": "ROW2COL",
     "features": {
         "bootmagic": true,
+        "command": false,
+        "console": false,
         "extrakey": true,
         "mousekey": true,
         "nkro": true,
-        "rgb_matrix": true
+        "rgb_matrix": true,
+        "dip_switch": false
     },
     "matrix_pins": {
         "cols": ["C1", "C2", "C3", "A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7", "C4", "C5", "B0", "B1", "B2", "B12", "B13"],

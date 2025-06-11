@@ -22,13 +22,12 @@ enum bt_keycodes {
     FN_FUN,
     FN_MENU,
     SLEEP_TOGGLE,
-    KC_SIRI,
 };
 
 typedef union {
     uint32_t raw;
     struct {
-        uint8_t rgb_tog_flag; // RGB toggle flag
+        // uint8_t rgb_tog_flag; // RGB toggle flag
         uint8_t ind_color_index;
         uint8_t ind_brightness;
         uint8_t smd_color_index;
