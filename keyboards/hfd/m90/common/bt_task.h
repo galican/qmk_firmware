@@ -32,10 +32,15 @@
 typedef union {
     uint32_t raw;
     struct {
-        uint8_t devs;
-        uint8_t last_devs;
-        uint8_t eco_tog_flag;
-        uint8_t sleep_mode;
+        uint8_t devs : 3;
+        uint8_t last_devs : 3;
+        struct {
+            uint8_t sleep_mode : 2;
+            uint8_t eco_tog_flag : 2;
+            uint8_t ind_color_index : 4;
+            uint8_t smd_color_index : 4;
+            uint8_t ind_brightness;
+        } config;
     };
 } dev_info_t;
 

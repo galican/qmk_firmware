@@ -32,7 +32,7 @@
         "max_brightness": 180,
         "val_steps": 36,
         "speed_steps": 64,
-        "sleep": false,
+        "sleep": true,
         "animations": {
             "solid_color": true,
             "breathing": true,
@@ -143,9 +143,9 @@
             { "flags": 1, "matrix": [5,16], "x": 211, "y": 64},
             { "flags": 1, "matrix": [5,17], "x": 224, "y": 64},
 
-            { "flags": 8, "x": 197, "y": 0 },
-            { "flags": 8, "x": 197, "y": 6 },
-            { "flags": 8, "x": 197, "y": 12 }
+            { "flags": 2, "x": 197, "y": 0 },
+            { "flags": 2, "x": 197, "y": 6 },
+            { "flags": 2, "x": 197, "y": 12 }
         ]
     },
     "layouts": {

@@ -150,8 +150,11 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case RGB_TOG:
             if (record->event.pressed) {
-                // rgb_info.rgb_tog_flag = ~rgb_info.rgb_tog_flag;
-                // if (!rgb_info.rgb_tog_flag) {
+                if (bts_info.bt_info.low_vol) {
+                    return false;
+                }
+                // dev_info.config.rgb_tog_flag = ~dev_info.config.rgb_tog_flag;
+                // if (!dev_info.config.rgb_tog_flag) {
                 if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
                     rgb_matrix_mode(RGB_MATRIX_DEFAULT_MODE);
                 } else {
@@ -210,24 +213,24 @@ void keyboard_post_init_kb(void) {
     // and the RGB matrix is initialized.
     // It can be used to set up additional features or configurations.
 
-    rgb_info.raw = eeconfig_read_kb();
+    // dev_info.config.raw = eeconfig_read_kb();
 
     keyboard_post_init_user();
 }
 
 void eeconfig_init_kb(void) {
-    dev_info.sleep_mode = 1;
-    eeconfig_update_user(dev_info.raw);
+    dev_info.config.sleep_mode = 1;
+    // eeconfig_update_user(dev_info.raw);
 
-    // rgb_info.ind_brightness = RGB_MATRIX_DEFAULT_VAL;
-    rgb_info.ind_brightness = RGB_MATRIX_VAL_STEP * 3;
-    eeconfig_update_kb(rgb_info.raw);
+    // dev_info.config.ind_brightness = RGB_MATRIX_DEFAULT_VAL;
+    dev_info.config.ind_brightness = RGB_MATRIX_VAL_STEP * 3;
+    // eeconfig_update_kb(dev_info.config.raw);
 
     // keymap_config.nkro = false;
     // eeconfig_update_keymap(&keymap_config);
-    rgb_matrix_config.hsv.h  = 170;
-    rgb_info.smd_color_index = 0;
-    eeconfig_update_kb(rgb_info.raw);
+    rgb_matrix_config.hsv.h         = 170;
+    dev_info.config.smd_color_index = 0;
+    eeconfig_update_user(dev_info.raw);
 
     rgb_matrix_mode(RGB_MATRIX_CUSTOM_EFFECT_OFF);
 
