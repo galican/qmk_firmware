@@ -14,7 +14,13 @@
 // 常量表定义
 // =============================================
 
-const uint8_t bt_rgb_index_table[DEVS_COUNT] = {BT_USB_LED_INDEX, BT_HOST1_LED_INDEX, BT_HOST2_LED_INDEX, BT_HOST3_LED_INDEX, BT_2_4G_LED_INDEX};
+const uint8_t bt_rgb_index_table[DEVS_COUNT] = {
+    BT_USB_LED_INDEX,   // USB指示灯索引
+    BT_HOST1_LED_INDEX, // HOST1指示灯索引
+    BT_HOST2_LED_INDEX, // HOST2指示灯索引
+    BT_HOST3_LED_INDEX, // HOST3指示灯索引
+    BT_2_4G_LED_INDEX,  // 2.4G指示灯索引
+};
 
 const uint8_t bt_rgb_color_table[DEVS_COUNT][3] = {
     {100, 100, 100}, // USB - 白色
@@ -355,18 +361,21 @@ void bt_indicator_update(bt_indicator_state_t *indicator, const bt_device_state_
 
     uint32_t current_time = timer_read32();
 
-    // 检查连接状态变化
+    // 检查连接状态变化（只对无线设备）
     static bool last_paired_status = false;
     bool        current_paired     = bt_bts_info.bt_info.paired;
 
-    if (last_paired_status != current_paired) {
-        last_paired_status = current_paired;
-        if (current_paired && indicator->status != BT_INDICATOR_CONNECTED) {
-            // 连接成功，切换到连接状态
-            bt_indicator_set_status(indicator, BT_INDICATOR_CONNECTED);
-            indicator->connected_time = current_time;
-            indicator->timeout_sleep  = false;
-            BT_DEBUG_INFO("Device connected successfully\n");
+    // 只有无线设备才检查连接状态
+    if (bt_device_is_wireless(device)) {
+        if (last_paired_status != current_paired) {
+            last_paired_status = current_paired;
+            if (current_paired && (indicator->status == BT_INDICATOR_CONNECTING || indicator->status == BT_INDICATOR_PAIRING)) {
+                // 无线设备连接成功
+                bt_indicator_set_status(indicator, BT_INDICATOR_CONNECTED);
+                indicator->connected_time = current_time;
+                indicator->timeout_sleep  = false;
+                BT_DEBUG_INFO("Wireless device connected successfully\n");
+            }
         }
     }
 
@@ -374,11 +383,13 @@ void bt_indicator_update(bt_indicator_state_t *indicator, const bt_device_state_
     switch (indicator->status) {
         case BT_INDICATOR_CONNECTING:
         case BT_INDICATOR_PAIRING:
-            // 检查60秒超时
-            if (timer_elapsed32(indicator->status_start_time) > 60000) {
+            // 检查60秒超时（只对无线设备）
+            if (bt_device_is_wireless(device) && timer_elapsed32(indicator->status_start_time) > 60000) {
                 indicator->timeout_sleep = true;
-                g_bt_ctx.kb_sleep_flag   = true; // 设置系统休眠标志
-                BT_DEBUG_INFO("Connection timeout (60s), setting sleep flag\n");
+                g_bt_ctx.kb_sleep_flag   = true;
+                // 超时后设置为OFF状态
+                bt_indicator_set_status(indicator, BT_INDICATOR_OFF);
+                BT_DEBUG_INFO("Connection timeout (60s), turning off indicator\n");
             } else if (indicator->blink_interval > 0) {
                 // 处理闪烁
                 if (timer_elapsed32(indicator->blink_time) > indicator->blink_interval) {
@@ -389,22 +400,32 @@ void bt_indicator_update(bt_indicator_state_t *indicator, const bt_device_state_
             break;
 
         case BT_INDICATOR_CONNECTED:
-            // 连接成功后3秒熄灭指示灯
-            if (indicator->connected_time && timer_elapsed32(indicator->connected_time) > 3000) {
-                indicator->connected_time = 0; // 标记已处理
-                BT_DEBUG_INFO("Connection indicator timeout, turning off\n");
+            // 连接成功后的超时处理
+            if (indicator->connected_time != 0) {
+                uint32_t timeout = 3000; // 默认3秒
+
+#ifdef BT_USB_INDICATOR_TIME
+                // USB模式使用不同的超时时间
+                if (device->current == DEVS_USB) {
+                    timeout = BT_USB_INDICATOR_TIME;
+                }
+#endif
+
+                if (timer_elapsed32(indicator->connected_time) > timeout) {
+                    indicator->connected_time = 0;
+                    // 3秒后设置为OFF状态
+                    bt_indicator_set_status(indicator, BT_INDICATOR_OFF);
+                    BT_DEBUG_INFO("Connected indicator timeout, turning off\n");
+                }
             }
-            indicator->flip_state = false;
             break;
 
         default:
-            indicator->flip_state = false;
             break;
     }
 
-    // 修正：直接使用 bt_rgb_color_table 中定义的设备指示灯颜色
+    // 根据设备类型设置颜色
     if (device->current < DEVS_COUNT) {
-        // 使用固定的设备颜色，不受 ind_brightness 和 ind_color_index 影响
         indicator->current_color.r = bt_rgb_color_table[device->current][0];
         indicator->current_color.g = bt_rgb_color_table[device->current][1];
         indicator->current_color.b = bt_rgb_color_table[device->current][2];
@@ -419,68 +440,83 @@ void bt_indicator_render(const bt_indicator_state_t *indicator, uint8_t led_min,
     // 定义系统指示灯索引，避免冲突
     const uint8_t lock_leds[] = {84, 85, 86}; // NUM, CAPS, SCROLL
 
-    // 获取当前设备的LED索引
+    // 获取当前设备
     device_type_t current_device = bt_device_get_current(&g_bt_ctx.device);
-    if (current_device < DEVS_COUNT) {
-        uint8_t current_led_index = bt_rgb_index_table[current_device];
 
-        if (current_led_index >= led_min && current_led_index < led_max) {
-            // 检查是否是系统指示灯
-            bool is_lock_led = false;
-            for (uint8_t j = 0; j < 3; j++) {
-                if (current_led_index == lock_leds[j]) {
-                    is_lock_led = true;
-                    break;
-                }
-            }
+    // 添加调试信息
+    static device_type_t last_debug_device = 0xFF;
+    if (last_debug_device != current_device) {
+        last_debug_device = current_device;
+        BT_DEBUG_INFO("Current device: %d, LED index: %d, Status: %d\n", current_device, (current_device < DEVS_COUNT) ? bt_rgb_index_table[current_device] : 0xFF, indicator->status);
+    }
 
-            // 只有非系统指示灯才处理设备指示
-            if (!is_lock_led) {
-                // USB设备指示灯开关检查
-#ifndef BT_ENABLE_USB_INDICATOR
-                if (current_device == DEVS_USB) {
-                    // USB指示灯被禁用，直接返回不处理
-                    return;
-                }
-#endif
+    // 检查设备有效性
+    if (current_device >= DEVS_COUNT) {
+        BT_DEBUG_INFO("Invalid device type: %d\n", current_device);
+        return;
+    }
 
-                // 可选：只显示无线设备指示
-#ifdef BT_ENABLE_WIRELESS_ONLY_INDICATOR
-                if (current_device == DEVS_USB) {
-                    return;
-                }
-#endif
+    uint8_t current_led_index = bt_rgb_index_table[current_device];
 
-                // 可选：完全禁用所有设备指示灯
-#ifdef BT_DISABLE_ALL_DEVICE_INDICATOR
-                return;
-#endif
+    // 检查LED索引有效性
+    if (current_led_index < led_min || current_led_index >= led_max) {
+        BT_DEBUG_INFO("LED index %d out of range [%d, %d)\n", current_led_index, led_min, led_max);
+        return;
+    }
 
-                switch (indicator->status) {
-                    case BT_INDICATOR_CONNECTING:
-                    case BT_INDICATOR_PAIRING:
-                        // 闪烁模式：明确的亮灭交替
-                        if (!indicator->flip_state) {
-                            // 亮状态：显示设备指示灯颜色
-                            rgb_matrix_set_color(current_led_index, indicator->current_color.r, indicator->current_color.g, indicator->current_color.b);
-                        } else {
-                            // 灭状态：强制设置为黑色
-                            rgb_matrix_set_color(current_led_index, 0, 0, 0);
-                        }
-                        break;
-
-                    case BT_INDICATOR_CONNECTED:
-                        // 连接成功后3秒内常亮
-                        if (indicator->connected_time != 0) {
-                            rgb_matrix_set_color(current_led_index, indicator->current_color.r, indicator->current_color.g, indicator->current_color.b);
-                        }
-                        break;
-
-                    default:
-                        break;
-                }
-            }
+    // 检查是否是系统指示灯
+    bool is_lock_led = false;
+    for (uint8_t j = 0; j < 3; j++) {
+        if (current_led_index == lock_leds[j]) {
+            is_lock_led = true;
+            BT_DEBUG_INFO("Device LED conflicts with lock LED %d\n", current_led_index);
+            break;
         }
+    }
+
+    if (is_lock_led) {
+        return; // 不处理与系统指示灯冲突的LED
+    }
+
+    // USB设备指示灯开关检查
+#ifndef BT_ENABLE_USB_INDICATOR
+    if (current_device == DEVS_USB) {
+        BT_DEBUG_INFO("USB indicator disabled\n");
+        return;
+    }
+#endif
+
+    // 根据状态处理LED
+    switch (indicator->status) {
+        case BT_INDICATOR_CONNECTING:
+        case BT_INDICATOR_PAIRING:
+            // 闪烁模式
+            if (!indicator->flip_state) {
+                // 亮状态：显示设备指示灯颜色
+                rgb_matrix_set_color(current_led_index, indicator->current_color.r, indicator->current_color.g, indicator->current_color.b);
+                BT_DEBUG_INFO("Device LED %d ON: R%d G%d B%d\n", current_led_index, indicator->current_color.r, indicator->current_color.g, indicator->current_color.b);
+            } else {
+                // 灭状态：强制设置为黑色
+                rgb_matrix_set_color(current_led_index, 0, 0, 0);
+                BT_DEBUG_INFO("Device LED %d OFF\n", current_led_index);
+            }
+            break;
+
+        case BT_INDICATOR_CONNECTED:
+            // 连接成功后常亮
+            if (indicator->connected_time != 0) {
+                rgb_matrix_set_color(current_led_index, indicator->current_color.r, indicator->current_color.g, indicator->current_color.b);
+                BT_DEBUG_INFO("Device LED %d CONNECTED: R%d G%d B%d\n", current_led_index, indicator->current_color.r, indicator->current_color.g, indicator->current_color.b);
+            } else {
+                BT_DEBUG_INFO("Connected indicator timeout, LED %d back to normal\n", current_led_index);
+            }
+            break;
+
+        case BT_INDICATOR_OFF:
+        default:
+            // 不做任何操作，保持正常灯效
+            BT_DEBUG_INFO("Indicator OFF, LED %d back to normal\n", current_led_index);
+            break;
     }
 }
 void bt_rgb_init(bt_rgb_state_t *rgb) {
@@ -913,11 +949,17 @@ bool bt_process_record(uint16_t keycode, keyrecord_t *record) {
             case BT_USB:
                 if (ctx->device.current != DEVS_USB) {
                     bt_device_switch(&ctx->device, DEVS_USB, false);
+
+#ifdef BT_ENABLE_USB_INDICATOR
+                    // USB也显示连接指示（白色常亮3秒）
                     bt_indicator_set_status(&ctx->indicator, BT_INDICATOR_CONNECTED);
-                    BT_DEBUG_INFO("Switching to USB mode (connected - solid light)\n");
+                    BT_DEBUG_INFO("Switching to USB mode (with white indicator)\n");
+#else
+                    // USB不显示指示
+                    bt_indicator_set_status(&ctx->indicator, BT_INDICATOR_OFF);
+                    BT_DEBUG_INFO("Switching to USB mode (no indicator)\n");
+#endif
                 }
-                retval = false;
-                break;
             case BT_VOL:
                 // 电量查询逻辑
                 if (!readPin(BT_CABLE_PIN)) {
