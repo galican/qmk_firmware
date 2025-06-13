@@ -144,17 +144,17 @@ void suspend_wakeup_init_user(void) {
 }
 
 bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
-    if (process_record_user(keycode, record) != true) {
+#ifdef BT_MODE_ENABLE
+    if (bt_process_record(keycode, record) != true) { // 使用新的函数名
         return false;
     }
+#endif
     switch (keycode) {
         case RGB_TOG:
             if (record->event.pressed) {
                 if (bts_info.bt_info.low_vol) {
                     return false;
                 }
-                // dev_info.config.rgb_tog_flag = ~dev_info.config.rgb_tog_flag;
-                // if (!dev_info.config.rgb_tog_flag) {
                 if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
                     rgb_matrix_mode(RGB_MATRIX_DEFAULT_MODE);
                 } else {
@@ -167,30 +167,9 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
                 }
             }
             return false;
-        case RGB_MOD:
-            if (record->event.pressed) {
-                rgb_matrix_step();
-                if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
-                    rgb_matrix_step();
-                }
-            }
-            return false;
-        case RGB_RMOD:
-            if (record->event.pressed) {
-                rgb_matrix_step_reverse();
-                if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
-                    rgb_matrix_step_reverse();
-                }
-            }
-            return false;
         default:
             break;
     }
-#ifdef BT_MODE_ENABLE
-    if (process_record_bt(keycode, record) != true) {
-        return false;
-    }
-#endif
     return true;
 }
 
@@ -201,7 +180,7 @@ void matrix_init_kb(void) {
 #endif
 
 #ifdef BT_MODE_ENABLE
-    bt_init();
+    bt_init(); // 使用新的初始化函数
     led_config_all();
 #endif
 
@@ -256,21 +235,10 @@ void housekeeping_task_kb(void) {
 }
 
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
-    if (rgb_matrix_indicators_advanced_user(led_min, led_max) != true) {
-        return false;
-    }
-
-#ifdef BT_MODE_ENABLE
-    if (bt_indicator_rgb(led_min, led_max) != true) {
-        return false;
-    }
-#endif
-
-    // GUI lock red
-    if (keymap_config.no_gui) {
-        rgb_matrix_set_color(74, 160, 160, 160);
-    }
-    return true;
+    // #ifdef BT_MODE_ENABLE
+    //     return bt_indicator_rgb(led_min, led_max); // 使用新的函数名
+    // #endif
+    return rgb_matrix_indicators_advanced_user(led_min, led_max);
 }
 
 #ifdef DIP_SWITCH_ENABLE
