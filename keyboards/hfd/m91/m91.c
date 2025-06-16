@@ -241,17 +241,11 @@ void keyboard_post_init_kb(void) {
 
 void eeconfig_init_kb(void) {
     dev_info.config.sleep_mode = 1;
-    // eeconfig_update_user(dev_info.raw);
-
-    // rgb_info.ind_brightness = RGB_MATRIX_DEFAULT_VAL;
     dev_info.config.ind_brightness = RGB_MATRIX_VAL_STEP * 3;
-    // eeconfig_update_kb(rgb_info.raw);
-
     // keymap_config.nkro = false;
     // eeconfig_update_keymap(&keymap_config);
     rgb_matrix_config.hsv.h         = 170;
     dev_info.config.smd_color_index = 0;
-    // eeconfig_update_kb(rgb_info.raw);
     eeconfig_update_user(dev_info.raw);
 
     rgb_matrix_mode(RGB_MATRIX_CUSTOM_EFFECT_OFF);
@@ -290,7 +284,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
 
     // GUI lock red
     if (keymap_config.no_gui) {
-        rgb_matrix_set_color(92, 160, 160, 160);
+        rgb_matrix_set_color(92, 100, 100, 100);
     }
     return true;
 }

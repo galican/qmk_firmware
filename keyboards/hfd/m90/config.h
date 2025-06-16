@@ -15,11 +15,11 @@
 #    define BT_CABLE_PIN B8  // 充电接入时为高
 #    define BT_CHARGE_PIN B9 // 充电时为低，充满时为高
 #    define RGB_DRIVER_SDB_PIN A15
-// #    define BT_HOST1_INDEX 14
-// #    define BT_HOST2_INDEX 15
-// #    define BT_HOST3_INDEX 16
-// #    define BT_2_4G_INDEX 17
-// #    define BT_USB_INDEX 18
+#    define BT_HOST1_INDEX 14
+#    define BT_HOST2_INDEX 15
+#    define BT_HOST3_INDEX 16
+#    define BT_2_4G_INDEX 17
+#    define BT_USB_INDEX 18
 #    define BT_MODE_SW_PIN B10
 #endif
 
@@ -49,7 +49,7 @@
 #define RGB_MATRIX_FRAMEBUFFER_EFFECTS
 #define RGB_MATRIX_KEYPRESSES
 
-#define RGB_MATRIX_DEFAULT_VAL 144
+#define RGB_MATRIX_DEFAULT_VAL 80
 #define RGB_MATRIX_DEFAULT_SPD 192
 
 #ifdef DIP_SWITCH_ENABLE

@@ -36,7 +36,7 @@ typedef union {
         uint8_t last_devs : 3;
         struct {
             uint8_t sleep_mode : 2;
-            uint8_t eco_tog_flag : 2;
+            bool    eco_tog_flag : 1;
             uint8_t ind_color_index : 4;
             uint8_t smd_color_index : 4;
             uint8_t ind_brightness;

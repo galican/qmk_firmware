@@ -1,5 +1,5 @@
 {
-    "name": "M90",
+    "name": "Alchemie",
     "vendorId": "0xFFFE",
     "productId": "0x00AC",
     "keycodes": ["qmk_lighting"],
@@ -60,7 +60,7 @@
         ]
       }
     ],
-    "matrix": { "rows": 6, "cols": 18 },
+    "matrix": { "rows": 6, "cols": 22 },
     "customKeycodes":[
         {"name":"BT_HOST1","title":"BT_HOST1","shortName":"BT_HOST1"},
         {"name":"BT_HOST2","title":"BT_HOST2","shortName":"BT_HOST2"},
@@ -69,209 +69,260 @@
         {"name":"BT_USB","title":"BT_USB","shortName":"BT_USB"},
         {"name":"BT_VOL","title":"Query the voltage of battery","shortName":"BT_VOL"},
         {"name":"SW_OS","title":"Switch os between window and ios","shortName":"SW_OS"},
-        {"name":"INDICATOR_HUE","title":"Change the color of LED indicator","shortName":"IND_HUE"},
-        {"name":"INDICATOR_BRIGHTNESS","title":"Increase the brightness level of LED indicator","shortName":"IND_VAL"},
+        {"name":"INDICATOR_COLOR","title":"Change the color of LED indicator","shortName":"IND_HUE"},
+        {"name":"INDICATOR_BRIGHTNESS","title":"Change the brightness level of LED indicator","shortName":"IND_VAL"},
         {"name":"ECO","title":"Toggle the ON/OFF state of LED indicator","shortName":"ECO"},
         {"name":"FACTORY_RESET","title":"Reset the PCB setting","shortName":"FACTORY"},
-        {"name":"KEYBOARD_RESET","title":"Reset the keyboard resetting","shortName":"KBY_RES"},
-        {"name":"BLE_RESET","title":"Reset the Bluetooth setting","shortName":"BLE_RES"},
+        {"name":"KEYBOARD_RESET","title":"Reset the keyboard resetting","shortName":"KB_RESET"},
+        {"name":"BLE_RESET","title":"Reset the Bluetooth setting","shortName":"BT_RESET"},
         {"name":"FN_FUN","title":"Swap the function keys","shortName":"FN_FUN"},
         {"name":"FN_MENU","title":"Swap the menu and alt","shortName":"FN_MENU"},
-        {"name":"SLEEP_TOGGLE","title":"Switch the sleep level","shortName":"SW_SELP"}
-      ],
+        {"name":"SLEEP_TOGGLE","title":"Toggle sleep mode","shortName":"SW_SLEEP"},
+        {"name":"WIN_LOCK","title":"WIN key lock","shortName":"WIN_LCOK"}
+    ],
     "layouts": {
-      "keymap":[
-        [
-          {
+    "keymap":[
+      [
+        {
             "c": "#777777"
-          },
-          "0,0",
-          {
+        },
+        "0,0",
+        {
             "x": 1,
             "c": "#aaaaaa"
-          },
-          "0,2",
-          "0,3",
-          "0,4",
-          "0,5",
-          {
-            "x": 0.5,
-            "c": "#cccccc"
-          },
-          "0,6",
-          "0,7",
-          "0,8",
-          "0,9",
-          {
-            "x": 0.5,
-            "c": "#aaaaaa"
-          },
-          "0,10",
-          "0,11",
-          "0,12",
-          "0,13"
+        },
+        "0,2",
+        "0,3",
+        "0,4",
+        "0,5",
+        {
+            "x": 0.5
+        },
+        "0,6",
+        "0,7",
+        "0,8",
+        "0,9",
+        {
+            "x": 0.5
+        },
+        "0,10",
+        "0,11",
+        "0,12",
+        "0,13",
+        {
+            "x": 0.25
+        },
+        "0,15",
+        "0,16",
+        "0,17"
         ],
         [
-          {
-            "y": 0.5,
+        {
+            "y": 0.25,
             "c": "#cccccc"
-          },
-          "1,0",
-          "1,1",
-          "1,2",
-          "1,3",
-          "1,4",
-          "1,5",
-          "1,6",
-          "1,7",
-          "1,8",
-          "1,9",
-          "1,10",
-          "1,11",
-          "1,12",
-          {
+        },
+        "1,0",
+        "1,1",
+        "1,2",
+        "1,3",
+        "1,4",
+        "1,5",
+        "1,6",
+        "1,7",
+        "1,8",
+        "1,9",
+        "1,10",
+        "1,11",
+        "1,12",
+        {
             "c": "#aaaaaa",
             "w": 2
-          },
-          "1,13",
-         {
+        },
+        "1,13",
+        {
             "x": 0.25
-         },
-          "1,15",
-          "1,16",
-          "1,17"
+        },
+        "1,15",
+        "1,16",
+        "1,17",
+        {
+            "x": 0.25,
+            "c": "#cccccc"
+        },
+        "1,18",
+        "1,19",
+        "1,20",
+        "1,21"
         ],
         [
-          {
+        {
             "w": 1.5
-          },
-          "2,0",
-          {
+        },
+        "2,0",
+        {
             "c": "#cccccc"
-          },
-          "2,1",
-          "2,2",
-          "2,3",
-          "2,4",
-          "2,5",
-          "2,6",
-          "2,7",
-          "2,8",
-          "2,9",
-          "2,10",
-          "2,11",
-          "2,12",
-          {
-            "w": 1.5,
+        },
+        "2,1",
+        "2,2",
+        "2,3",
+        "2,4",
+        "2,5",
+        "2,6",
+        "2,7",
+        "2,8",
+        "2,9",
+        "2,10",
+        "2,11",
+        "2,12",
+        {
+            "w": 1.5
+        },
+        "2,13",
+        {
+            "x": 0.25,
             "c": "#aaaaaa"
-          },
-          "2,13",
-          {
-            "x": 0.25
-          },
-          "2,15",
-          "2,16",
-          "2,17"
+        },
+        "2,15",
+        "2,16",
+        "2,17",
+        {
+            "x": 0.25,
+            "c": "#cccccc"
+        },
+        "2,18",
+        "2,19",
+        "2,20",
+        {
+            "h": 2
+        },
+        "2,21"
         ],
         [
-          {
+        {
+            "c": "#aaaaaa",
             "w": 1.75
-          },
-          "3,0",
-          {
+        },
+        "3,0",
+        {
             "c": "#cccccc"
-          },
-          "3,1",
-          "3,2",
-          "3,3",
-          "3,4",
-          "3,5",
-          "3,6",
-          "3,7",
-          "3,8",
-          "3,9",
-          "3,10",
-          "3,11",
-          {
+        },
+        "3,1",
+        "3,2",
+        "3,3",
+        "3,4",
+        "3,5",
+        "3,6",
+        "3,7",
+        "3,8",
+        "3,9",
+        "3,10",
+        "3,11",
+        {
             "c": "#777777",
             "w": 2.25
-          },
-          "3,13"
+        },
+        "3,13",
+        {
+            "x": 3.5,
+            "c": "#cccccc"
+        },
+        "3,18",
+        "3,19",
+        "3,20"
         ],
         [
-          {
-            "w": 2.25,
-            "c": "#aaaaaa"
-          },
-          "4,0",
-          {
+        {
+            "c": "#aaaaaa",
+            "w": 2.25
+        },
+        "4,0",
+        {
             "c": "#cccccc"
-          },
-          "4,1",
-          "4,2",
-          "4,3",
-          "4,4",
-          "4,5",
-          "4,6",
-          "4,7",
-          "4,8",
-          "4,9",
-          "4,10",
-          {
+        },
+        "4,1",
+        "4,2",
+        "4,3",
+        "4,4",
+        "4,5",
+        "4,6",
+        "4,7",
+        "4,8",
+        "4,9",
+        "4,10",
+        {
             "c": "#aaaaaa",
             "w": 2.75
-          },
-          "4,13",
-          {
+        },
+        "4,13",
+        {
             "x": 1.25,
             "c": "#777777"
-          },
-          "4,16"
+        },
+        "4,16",
+        {
+            "x": 1.25,
+            "c": "#cccccc"
+        },
+        "4,18",
+        "4,19",
+        "4,20",
+        {
+            "c": "#777777",
+            "h": 2
+        },
+        "4,21"
         ],
         [
-          {
+        {
             "c": "#aaaaaa",
             "w": 1.25
-          },
-          "5,0",
-          {
+        },
+        "5,0",
+        {
             "w": 1.25
-          },
-          "5,1",
-          {
+        },
+        "5,1",
+        {
             "w": 1.25
-          },
-          "5,2",
-          {
-            "c": "#cccccc",
+        },
+        "5,2",
+        {
+            "c": "#777777",
             "w": 6.25
-          },
-          "5,5",
-          {
+        },
+        "5,5",
+        {
             "c": "#aaaaaa",
             "w": 1.25
-          },
-          "5,9",
-          {
+        },
+        "5,9",
+        {
             "w": 1.25
-          },
-          "5,10",
-          {
+        },
+        "5,10",
+        {
             "w": 1.25
-          },
-          "5,12",
-          {
+        },
+        "5,12",
+        {
             "w": 1.25
-          },
-          "5,13",
-          {
+        },
+        "5,13",
+        {
             "x": 0.25,
             "c": "#777777"
-          },
-          "5,15",
-          "5,16",
-          "5,17"
+        },
+        "5,15",
+        "5,16",
+        "5,17",
+        {
+            "x": 0.25,
+            "c": "#cccccc",
+            "w": 2
+        },
+        "5,18",
+        "5,20"
         ]
       ]
     }
-  }
+}

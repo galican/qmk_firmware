@@ -22,6 +22,7 @@ enum bt_keycodes {
     FN_FUN,
     FN_MENU,
     SLEEP_TOGGLE,
+    WIN_LOCK,
 };
 
 // typedef union {
