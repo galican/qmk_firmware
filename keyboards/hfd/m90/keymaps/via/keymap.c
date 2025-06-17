@@ -196,8 +196,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         case RGB_VAI: {
             if (record->event.pressed) {
-                rgb_matrix_increase_val();
-                if (rgb_matrix_get_val() == RGB_MATRIX_MAXIMUM_BRIGHTNESS) rgb_matrix_config.hsv.v = RGB_MATRIX_MAXIMUM_BRIGHTNESS;
+                if (rgb_matrix_get_val() == RGB_MATRIX_MAXIMUM_BRIGHTNESS) {
+                    rgb_matrix_config.hsv.v = RGB_MATRIX_MAXIMUM_BRIGHTNESS;
+                } else {
+                    rgb_matrix_increase_val();
+                }
             }
         }
             return false;
@@ -259,7 +262,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 eeconfig_update_user(dev_info.raw);
                 rgb_matrix_config.hsv.h = indicator_color_tab[dev_info.config.smd_color_index][0];
                 rgb_matrix_config.hsv.s = indicator_color_tab[dev_info.config.smd_color_index][1];
-                rgb_matrix_config.hsv.s = rgb_matrix_config.hsv.s;
+                rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
             }
         }
             return false;
@@ -273,7 +276,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 eeconfig_update_user(dev_info.raw);
                 rgb_matrix_config.hsv.h = indicator_color_tab[dev_info.config.smd_color_index][0];
                 rgb_matrix_config.hsv.s = indicator_color_tab[dev_info.config.smd_color_index][1];
-                rgb_matrix_config.hsv.s = rgb_matrix_config.hsv.s;
+                rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
             }
         }
             return false;
@@ -385,7 +388,7 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     }
 
 #ifdef BT_MODE_ENABLE
-    return bt_indicator_rgb(led_min, led_max); // 使用新的函数名
+    // return bt_indicator_rgb(led_min, led_max); // 使用新的函数名
 #endif
 
     return true;
@@ -394,5 +397,5 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 void keyboard_post_init_user() {
     rgb_matrix_config.hsv.h = indicator_color_tab[dev_info.config.smd_color_index][0];
     rgb_matrix_config.hsv.s = indicator_color_tab[dev_info.config.smd_color_index][1];
-    rgb_matrix_config.hsv.s = rgb_matrix_config.hsv.s;
+    rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
 }

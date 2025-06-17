@@ -65,7 +65,7 @@ void bt_mousekey_task(void);
       {.keycode = BT_HOST2, .press_time = 0, .event_cb = long_pressed_keys_cb},
       {.keycode = BT_HOST3, .press_time = 0, .event_cb = long_pressed_keys_cb},
       {.keycode = BT_2_4G, .press_time = 0, .event_cb = long_pressed_keys_cb},
-      {.keycode = SW_OS, .press_time = 0, .event_cb = long_pressed_keys_cb},
+    //   {.keycode = SW_OS, .press_time = 0, .event_cb = long_pressed_keys_cb},
       {.keycode = FACTORY_RESET, .press_time = 0, .event_cb = long_pressed_keys_cb},
       {.keycode = KEYBOARD_RESET, .press_time = 0, .event_cb = long_pressed_keys_cb},
       {.keycode = BLE_RESET, .press_time = 0, .event_cb = long_pressed_keys_cb}
@@ -444,12 +444,12 @@ static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
                     if (keymap_config.nkro) {
                         single_blink_cnt   = 6;
                         single_blink_index = 0;
-                        single_blink_color = (RGB){0, 0, 100};
+                        single_blink_color = (RGB){100, 100, 100};
                         single_blink_time  = timer_read32();
                     } else {
                         single_blink_cnt   = 6;
                         single_blink_index = 0;
-                        single_blink_color = (RGB){100, 100, 100};
+                        single_blink_color = (RGB){0, 0, 100};
                         single_blink_time  = timer_read32();
                     }
                 }
@@ -827,10 +827,8 @@ void bt_led(void) {
     }
     if (indicator_status) {
         rgb_matrix_set_color(rgb_index, rgb.r, rgb.g, rgb.b);
-    } else {
-        if (rgb_matrix_get_flags() == LED_FLAG_NONE) {
-            rgb_matrix_set_color(rgb_index, 0, 0, 0);
-        }
+    } else if (rgb_matrix_get_flags() == LED_FLAG_NONE) {
+        rgb_matrix_set_color(rgb_index, 0, 0, 0);
     }
 }
 
@@ -862,9 +860,9 @@ void usb_led(void) {
 }
 
 uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
-    static bool  query_vol_processing   = false;
-    uint32_t     detect_charge_pin_time = 0;
-    rgb_config_t saved_rgb_config       = {0};
+    static bool query_vol_processing   = false;
+    uint32_t    detect_charge_pin_time = 0;
+    // rgb_config_t saved_rgb_config       = {0};
 
     // FN 按下时显示当前设备状态
     if ((get_highest_layer(default_layer_state | layer_state) == 1) || (get_highest_layer(default_layer_state | layer_state) == 3)) {
@@ -881,15 +879,6 @@ uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
             switch (factory_reset_status) {
                 case 1: // factory reset
                     eeconfig_init();
-                    eeconfig_update_rgb_matrix_default();
-                    {
-                        // rgb_matrix_config.enable = RGB_MATRIX_DEFAULT_ON;
-                        // rgb_matrix_config.mode   = RGB_MATRIX_DEFAULT_MODE;
-                        // rgb_matrix_config.hsv    = (hsv_t){RGB_MATRIX_DEFAULT_HUE, RGB_MATRIX_DEFAULT_SAT, RGB_MATRIX_DEFAULT_VAL};
-                        // rgb_matrix_config.speed  = RGB_MATRIX_DEFAULT_SPD;
-                        // rgb_matrix_config.flags  = RGB_MATRIX_DEFAULT_FLAGS;
-                        // eeconfig_flush_rgb_matrix(true);
-                    }
                     dev_info.config.ind_brightness  = RGB_MATRIX_VAL_STEP * 3;
                     dev_info.config.ind_color_index = 0;
                     dev_info.config.eco_tog_flag    = false;
@@ -906,11 +895,13 @@ uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
 
                     break;
                 case 2: // keyboard reset
-                    layer_save       = get_highest_layer(default_layer_state);
-                    saved_rgb_config = rgb_matrix_config;
+                    // layer_save = get_highest_layer(default_layer_state);
+                    // saved_rgb_config = rgb_matrix_config;
                     eeconfig_init();
-                    rgb_matrix_config = saved_rgb_config;
-                    set_single_persistent_default_layer(layer_save);
+                    keymap_config.no_gui = 0;
+                    eeconfig_update_keymap(&keymap_config);
+                    // rgb_matrix_config = saved_rgb_config;
+                    // set_single_persistent_default_layer(layer_save);
                     break;
                 case 3: // ble reset
                     if (readPin(BT_MODE_SW_PIN) && (dev_info.devs != DEVS_USB) && (dev_info.devs != DEVS_2_4G)) {

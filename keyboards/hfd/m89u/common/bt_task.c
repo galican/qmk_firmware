@@ -8,11 +8,13 @@
  * @copyright Copyright (c) 2023 Westberry Technology Corp., Ltd
  */
 
-#include QMK_KEYBOARD_H
-
+#include "common/bts_lib.h"
+#include "config.h"
+#include "gpio.h"
+#include "m89u.h"
 #include "quantum.h"
+#include "rgb_matrix.h"
 #include "uart.h"
-#include "report.h"
 #include "usb_main.h"
 #include "common/bt_task.h"
 
@@ -23,6 +25,10 @@
 #else
 #    define BT_DEBUG_INFO(fmt, ...)
 #endif
+
+extern keymap_config_t keymap_config;
+
+void bt_bat_low_indicator(void);
 
 typedef struct {
     uint32_t press_time;
@@ -51,166 +57,48 @@ static void bt_used_pin_init(void);
 void        open_rgb(void);
 static void close_rgb(void);
 #endif
-static void bt_mousekey_task(void);
+void bt_mousekey_task(void);
+
 // clang-format off
-long_pressed_keys_t long_pressed_keys[] = {
-    {.keycode = BT_HOST1, .press_time = 0, .event_cb = long_pressed_keys_cb},
-    {.keycode = BT_HOST2, .press_time = 0, .event_cb = long_pressed_keys_cb},
-    {.keycode = BT_HOST3, .press_time = 0, .event_cb = long_pressed_keys_cb},
-    {.keycode = BT_2_4G, .press_time = 0, .event_cb = long_pressed_keys_cb},
-
-//   {.keycode = BT_PAIR, .press_time = 0, .event_cb = long_pressed_keys_cb},
-//   {.keycode = EX_PAIR, .press_time = 0, .event_cb = long_pressed_keys_cb},
-//   {.keycode = GU_TOGG, .press_time = 0, .event_cb = long_pressed_keys_cb},
-//   {.keycode = SW_OS, .press_time = 0, .event_cb = long_pressed_keys_cb},
-//   {.keycode = RGB_TEST, .press_time = 0, .event_cb = long_pressed_keys_cb},
-
-  {.keycode = NL_OFF, .press_time = 0, .event_cb = long_pressed_keys_cb},
-
-  {.keycode = RST_ALL, .press_time = 0, .event_cb = long_pressed_keys_cb},
-  {.keycode = RST_LYR, .press_time = 0, .event_cb = long_pressed_keys_cb},
-  {.keycode = RST_BLE, .press_time = 0, .event_cb = long_pressed_keys_cb},
-};
+  long_pressed_keys_t long_pressed_keys[] = {
+      {.keycode = BT_HOST1, .press_time = 0, .event_cb = long_pressed_keys_cb},
+      {.keycode = BT_HOST2, .press_time = 0, .event_cb = long_pressed_keys_cb},
+      {.keycode = BT_HOST3, .press_time = 0, .event_cb = long_pressed_keys_cb},
+      {.keycode = BT_2_4G, .press_time = 0, .event_cb = long_pressed_keys_cb},
+    //   {.keycode = SW_OS, .press_time = 0, .event_cb = long_pressed_keys_cb},
+      {.keycode = FACTORY_RESET, .press_time = 0, .event_cb = long_pressed_keys_cb},
+      {.keycode = KEYBOARD_RESET, .press_time = 0, .event_cb = long_pressed_keys_cb},
+      {.keycode = BLE_RESET, .press_time = 0, .event_cb = long_pressed_keys_cb}
+  };
 // clang-format on
-void register_mouse(uint8_t mouse_keycode, bool pressed);
-/** \brief Utilities for actions. (FIXME: Needs better description)
- *
- * FIXME: Needs documentation.
- */
-__attribute__((weak)) void register_code(uint8_t code) {
-    if (dev_info.devs) {
-        bts_process_keys(code, 1, dev_info.devs, keymap_config.no_gui);
-        bts_task(dev_info.devs);
-        while (bts_is_busy()) {}
-    } else {
-        if (code == KC_NO) {
-            return;
 
-#ifdef LOCKING_SUPPORT_ENABLE
-        } else if (KC_LOCKING_CAPS_LOCK == code) {
-#    ifdef LOCKING_RESYNC_ENABLE
-            // Resync: ignore if caps lock already is on
-            if (host_keyboard_leds() & (1 << USB_LED_CAPS_LOCK)) return;
-#    endif
-            add_key(KC_CAPS_LOCK);
-            send_keyboard_report();
-            wait_ms(TAP_HOLD_CAPS_DELAY);
-            del_key(KC_CAPS_LOCK);
-            send_keyboard_report();
+uint8_t         indicator_status          = 2;
+uint8_t         indicator_reset_last_time = false;
+uint8_t         layer_save;
+// static uint16_t Low_power_blink_time;
+// static uint16_t charge_full_blink_time;
 
-        } else if (KC_LOCKING_NUM_LOCK == code) {
-#    ifdef LOCKING_RESYNC_ENABLE
-            if (host_keyboard_leds() & (1 << USB_LED_NUM_LOCK)) return;
-#    endif
-            add_key(KC_NUM_LOCK);
-            send_keyboard_report();
-            wait_ms(100);
-            del_key(KC_NUM_LOCK);
-            send_keyboard_report();
+static uint32_t key_press_time;
+static uint32_t close_rgb_time;
+static bool     bak_rgb_toggle;
+static bool     sober         = true;
+bool            kb_sleep_flag = false;
+extern bool     led_inited;
+extern void     led_config_all(void);
+extern void     led_deconfig_all(void);
 
-        } else if (KC_LOCKING_SCROLL_LOCK == code) {
-#    ifdef LOCKING_RESYNC_ENABLE
-            if (host_keyboard_leds() & (1 << USB_LED_SCROLL_LOCK)) return;
-#    endif
-            add_key(KC_SCROLL_LOCK);
-            send_keyboard_report();
-            wait_ms(100);
-            del_key(KC_SCROLL_LOCK);
-            send_keyboard_report();
-#endif
+static const uint8_t rgb_index_table[]          = {BT_USB_INDEX, BT_HOST1_INDEX, BT_HOST2_INDEX, BT_HOST3_INDEX, BT_2_4G_INDEX};
+static const uint8_t rgb_index_color_table[][3] = {
+    {100, 100, 100}, {0, 0, 100}, {0, 0, 100}, {0, 0, 100}, {0, 100, 0},
+};
 
-        } else if (IS_BASIC_KEYCODE(code)) {
-            // TODO: should push command_proc out of this block?
-            if (command_proc(code)) return;
+static bool rgb_status_save = 1;
 
-            // Force a new key press if the key is already pressed
-            // without this, keys with the same keycode, but different
-            // modifiers will be reported incorrectly, see issue #1708
-            if (is_key_pressed(code)) {
-                del_key(code);
-                send_keyboard_report();
-            }
-            add_key(code);
-            send_keyboard_report();
-        } else if (IS_MODIFIER_KEYCODE(code)) {
-            add_mods(MOD_BIT(code));
-            send_keyboard_report();
+const uint32_t sleep_time_table[4] = {0, 10 * 60 * 1000, 30 * 60 * 1000, 60 * 60 * 1000};
 
-#ifdef EXTRAKEY_ENABLE
-        } else if (IS_SYSTEM_KEYCODE(code)) {
-            host_system_send(KEYCODE2SYSTEM(code));
-        } else if (IS_CONSUMER_KEYCODE(code)) {
-            host_consumer_send(KEYCODE2CONSUMER(code));
-#endif
+static uint8_t switch_saved_wireless_device = DEVS_HOST1; // 开关保存的无线设备
+static bool    last_operation_manual        = false;      // 最后一次操作是否为手动
 
-        } else if (IS_MOUSE_KEYCODE(code)) {
-            register_mouse(code, true);
-        }
-    }
-}
-
-/** \brief Utilities for actions. (FIXME: Needs better description)
- *
- * FIXME: Needs documentation.
- */
-__attribute__((weak)) void unregister_code(uint8_t code) {
-    if (dev_info.devs) {
-        bts_process_keys(code, 0, dev_info.devs, keymap_config.no_gui);
-        bts_task(dev_info.devs);
-        while (bts_is_busy()) {}
-    } else {
-        if (code == KC_NO) {
-            return;
-
-#ifdef LOCKING_SUPPORT_ENABLE
-        } else if (KC_LOCKING_CAPS_LOCK == code) {
-#    ifdef LOCKING_RESYNC_ENABLE
-            // Resync: ignore if caps lock already is off
-            if (!(host_keyboard_leds() & (1 << USB_LED_CAPS_LOCK))) return;
-#    endif
-            add_key(KC_CAPS_LOCK);
-            send_keyboard_report();
-            del_key(KC_CAPS_LOCK);
-            send_keyboard_report();
-
-        } else if (KC_LOCKING_NUM_LOCK == code) {
-#    ifdef LOCKING_RESYNC_ENABLE
-            if (!(host_keyboard_leds() & (1 << USB_LED_NUM_LOCK))) return;
-#    endif
-            add_key(KC_NUM_LOCK);
-            send_keyboard_report();
-            del_key(KC_NUM_LOCK);
-            send_keyboard_report();
-
-        } else if (KC_LOCKING_SCROLL_LOCK == code) {
-#    ifdef LOCKING_RESYNC_ENABLE
-            if (!(host_keyboard_leds() & (1 << USB_LED_SCROLL_LOCK))) return;
-#    endif
-            add_key(KC_SCROLL_LOCK);
-            send_keyboard_report();
-            del_key(KC_SCROLL_LOCK);
-            send_keyboard_report();
-#endif
-
-        } else if (IS_BASIC_KEYCODE(code)) {
-            del_key(code);
-            send_keyboard_report();
-        } else if (IS_MODIFIER_KEYCODE(code)) {
-            del_mods(MOD_BIT(code));
-            send_keyboard_report();
-
-#ifdef EXTRAKEY_ENABLE
-        } else if (IS_SYSTEM_KEYCODE(code)) {
-            host_system_send(0);
-        } else if (IS_CONSUMER_KEYCODE(code)) {
-            host_consumer_send(0);
-#endif
-
-        } else if (IS_MOUSE_KEYCODE(code)) {
-            register_mouse(code, false);
-        }
-    }
-}
 static THD_WORKING_AREA(waThread1, 128);
 static THD_FUNCTION(Thread1, arg) {
     (void)arg;
@@ -221,7 +109,6 @@ static THD_FUNCTION(Thread1, arg) {
     }
 }
 
-static bool rgb_status_save = 1;
 /**
  * @brief bluetooth 初始化函数
  * @param None
@@ -234,21 +121,28 @@ void bt_init(void) {
     // Read the user config from EEPROM
     dev_info.raw = eeconfig_read_user();
     if (!dev_info.raw) {
+#ifdef BT_MODE_SW_PIN
+        if (readPin(BT_MODE_SW_PIN)) {
+            dev_info.devs      = DEVS_HOST1;
+            dev_info.last_devs = DEVS_USB;
+        } else {
+            dev_info.devs      = DEVS_USB;
+            dev_info.last_devs = DEVS_HOST1;
+        }
+#else
         dev_info.devs      = DEVS_USB;
         dev_info.last_devs = DEVS_HOST1;
+#endif
         eeconfig_update_user(dev_info.raw);
     }
     bt_init_time = timer_read32();
+    // bt_scan_mode();
     chThdCreateStatic(waThread1, sizeof(waThread1), HIGHPRIO, Thread1, NULL);
-    bt_scan_mode();
-    bts_send_name(DEVS_HOST1);
-    wait_ms(10);
-
     if (dev_info.devs != DEVS_USB) {
         usbDisconnectBus(&USB_DRIVER);
         usbStop(&USB_DRIVER);
-        writePinHigh(A12);
     }
+    setPinOutput(A14);
     if (dev_info.devs == DEVS_USB) {
         writePinLow(A14);
     } else {
@@ -256,62 +150,6 @@ void bt_init(void) {
     }
 
     rgb_status_save = rgb_matrix_config.enable;
-}
-uint16_t bt_mod_tap_pressed_time;
-uint16_t bt_mod_tap_released_time;
-uint16_t bt_mod_tap_keycode;
-void bt_modcode_send(uint16_t keycode, bool pressed){
-    if ((keycode > QK_MODS) && (keycode <= QK_MODS_MAX)) {
-        if (QK_MODS_GET_MODS(keycode) & 0x1) {
-            if(QK_MODS_GET_MODS(keycode) & 0x10)
-                bts_process_keys(KC_RCTL, pressed, dev_info.devs, keymap_config.no_gui);
-            else
-                bts_process_keys(KC_LCTL, pressed, dev_info.devs, keymap_config.no_gui);
-        }
-        if (QK_MODS_GET_MODS(keycode) & 0x2) {
-            if (QK_MODS_GET_MODS(keycode) & 0x10)
-                bts_process_keys(KC_RSFT, pressed, dev_info.devs, keymap_config.no_gui);
-            else
-                bts_process_keys(KC_LSFT, pressed, dev_info.devs, keymap_config.no_gui);
-        }
-        if (QK_MODS_GET_MODS(keycode) & 0x4) {
-            if (QK_MODS_GET_MODS(keycode) & 0x10)
-                bts_process_keys(KC_RALT, pressed, dev_info.devs, keymap_config.no_gui);
-            else
-                bts_process_keys(KC_LALT, pressed, dev_info.devs, keymap_config.no_gui);
-        }
-        if (QK_MODS_GET_MODS(keycode) & 0x8) {
-            if (QK_MODS_GET_MODS(keycode) & 0x10)
-                bts_process_keys(KC_RGUI, pressed, dev_info.devs, keymap_config.no_gui);
-            else
-                bts_process_keys(KC_LGUI, pressed, dev_info.devs, keymap_config.no_gui);
-        }
-    } else if ((keycode > QK_MOD_TAP) && (keycode <= QK_MOD_TAP_MAX)) {
-        if (QK_MOD_TAP_GET_MODS(keycode) & 0x1) {
-            if(QK_MOD_TAP_GET_MODS(keycode) & 0x10)
-                bts_process_keys(KC_RCTL, pressed, dev_info.devs, keymap_config.no_gui);
-            else
-                bts_process_keys(KC_LCTL, pressed, dev_info.devs, keymap_config.no_gui);
-        }
-        if (QK_MOD_TAP_GET_MODS(keycode) & 0x2) {
-            if (QK_MOD_TAP_GET_MODS(keycode) & 0x10)
-                bts_process_keys(KC_RSFT, pressed, dev_info.devs, keymap_config.no_gui);
-            else
-                bts_process_keys(KC_LSFT, pressed, dev_info.devs, keymap_config.no_gui);
-        }
-        if (QK_MOD_TAP_GET_MODS(keycode) & 0x4) {
-            if (QK_MOD_TAP_GET_MODS(keycode) & 0x10)
-                bts_process_keys(KC_RALT, pressed, dev_info.devs, keymap_config.no_gui);
-            else
-                bts_process_keys(KC_LALT, pressed, dev_info.devs, keymap_config.no_gui);
-        }
-        if (QK_MOD_TAP_GET_MODS(keycode) & 0x8) {
-            if (QK_MOD_TAP_GET_MODS(keycode) & 0x10)
-                bts_process_keys(KC_RGUI, pressed, dev_info.devs, keymap_config.no_gui);
-            else
-                bts_process_keys(KC_LGUI, pressed, dev_info.devs, keymap_config.no_gui);
-        }
-    }
 }
 
 /**
@@ -325,17 +163,17 @@ void bt_task(void) {
     if ((bt_init_time != 0) && (timer_elapsed32(bt_init_time) >= 2000)) {
         bt_init_time = 0;
 
+        // bts_send_vendor(v_en_sleep_bt);
+        bts_send_name(DEVS_HOST1);
         switch (dev_info.devs) {
             case DEVS_HOST1: {
                 bts_send_vendor(v_host1);
             } break;
             case DEVS_HOST2: {
                 bts_send_vendor(v_host2);
-                // bts_send_name(DEVS_HOST2);
             } break;
             case DEVS_HOST3: {
                 bts_send_vendor(v_host3);
-                // bts_send_name(DEVS_HOST3);
             } break;
             case DEVS_2_4G: {
                 bts_send_vendor(v_2_4g);
@@ -346,7 +184,11 @@ void bt_task(void) {
                 eeconfig_update_user(dev_info.raw);
             } break;
         }
+        // dev_info.raw = eeconfig_read_user();
+        // if (!dev_info.en_sleep_flag) {
         bts_send_vendor(v_en_sleep_bt);
+        bts_send_vendor(v_en_sleep_wl);
+        // }
     }
 
     /* Execute every 1ms */
@@ -356,82 +198,60 @@ void bt_task(void) {
         // 设定指示灯状态
         if (dev_info.devs != DEVS_USB) {
             uint8_t keyboard_led_state = 0;
-            led_t         *kb_leds = (led_t *)&keyboard_led_state;
-            kb_leds->raw           = bts_info.bt_info.indictor_rgb_s;
+            led_t  *kb_leds            = (led_t *)&keyboard_led_state;
+            kb_leds->raw               = bts_info.bt_info.indictor_rgb_s;
             usb_device_state_set_leds(keyboard_led_state);
 
 #ifdef RGB_MATRIX_ENABLE
-            // if(dev_info.sleep_time_index != 2){
-                close_rgb();
-            // }
+            close_rgb();
 #endif
         }
     }
-    if((bt_mod_tap_pressed_time > bt_mod_tap_released_time) && (timer_elapsed(bt_mod_tap_pressed_time) > 100)) {
-        if((bt_mod_tap_pressed_time - bt_mod_tap_released_time) > 200)
-            bt_modcode_send(bt_mod_tap_keycode, 1);
-        bt_mod_tap_pressed_time = 0;
-    }
-    bt_mousekey_task();
     long_pressed_keys_hook();
     bt_scan_mode();
 }
 
-// uint32_t    pressed_time    = 0;
 bool process_record_bt(uint16_t keycode, keyrecord_t *record) {
     bool retval = true;
     // clang-format off
-    if (record->event.pressed) {
-        BT_DEBUG_INFO("\n\nkeycode = [0x%x], pressed time: [%d]\n\n", keycode, record->event.time);
-        BT_DEBUG_INFO("\n devs     = [%d] \
-                    \n sleeped       = [%d] \
-                    \n low_vol       = [%d] \
-                    \n low_vol_offed = [%d] \
-                    \n normal_vol    = [%d] \
-                    \n pairing       = [%d] \
-                    \n paired        = [%d] \
-                    \n come_back     = [%d] \
-                    \n come_back_err = [%d] \
-                    \n mode_switched = [%d] \
-                    \n pvol          = [%d]\n\n\n",
-                    dev_info.devs,
-                    bts_info.bt_info.sleeped,
-                    bts_info.bt_info.low_vol,
-                    bts_info.bt_info.low_vol_offed,
-                    bts_info.bt_info.normal_vol,
-                    bts_info.bt_info.pairing,
-                    bts_info.bt_info.paired,
-                    bts_info.bt_info.come_back,
-                    bts_info.bt_info.come_back_err,
-                    bts_info.bt_info.mode_switched,
-                    bts_info.bt_info.pvol);
+       if (record->event.pressed) {
+           BT_DEBUG_INFO("\n\nkeycode = [0x%x], pressed time: [%d]\n\n", keycode, record->event.time);
+           BT_DEBUG_INFO("\n devs     = [%d] \
+                       \n sleeped       = [%d] \
+                       \n low_vol       = [%d] \
+                       \n low_vol_offed = [%d] \
+                       \n normal_vol    = [%d] \
+                       \n pairing       = [%d] \
+                       \n paired        = [%d] \
+                       \n come_back     = [%d] \
+                       \n come_back_err = [%d] \
+                       \n mode_switched = [%d] \
+                       \n pvol          = [%d]\n\n\n",
+                       dev_info.devs,
+                       bts_info.bt_info.sleeped,
+                       bts_info.bt_info.low_vol,
+                       bts_info.bt_info.low_vol_offed,
+                       bts_info.bt_info.normal_vol,
+                       bts_info.bt_info.pairing,
+                       bts_info.bt_info.paired,
+                       bts_info.bt_info.come_back,
+                       bts_info.bt_info.come_back_err,
+                       bts_info.bt_info.mode_switched,
+                       bts_info.bt_info.pvol);
+
         // clang-format on
-        // pressed_time = timer_read32();
         if (!rgb_matrix_config.enable) {
             if (rgb_status_save) {
                 rgb_matrix_enable_noeeprom();
             }
         }
     }
+
     retval = process_record_other(keycode, record);
 
     if (dev_info.devs != DEVS_USB) {
         if (retval != false) {
-            if ((keycode > QK_MODS) && (keycode <= QK_MODS_MAX)) {
-                bt_modcode_send(keycode, record->event.pressed);
-                retval = bts_process_keys(QK_MODS_GET_BASIC_KEYCODE(keycode), record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            } else if ((keycode > QK_MOD_TAP) && (keycode <= QK_MOD_TAP_MAX)) {
-                if(record->event.pressed){
-                    bt_mod_tap_pressed_time = timer_read();
-                    bt_mod_tap_keycode = keycode;
-                } else {
-                    bt_modcode_send(keycode, 0);
-                    bt_mod_tap_released_time = timer_read();
-                    bt_mod_tap_pressed_time = 0;
-                }
-            } else {
-                retval = bts_process_keys(keycode, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
+            retval = bts_process_keys(keycode, record->event.pressed, dev_info.devs, keymap_config.no_gui);
         }
     }
 
@@ -442,8 +262,10 @@ bool process_record_bt(uint16_t keycode, keyrecord_t *record) {
     return retval;
 }
 
+uint32_t USB_switch_time;
+uint8_t  USB_blink_cnt;
+
 void bt_switch_mode(uint8_t last_mode, uint8_t now_mode, uint8_t reset) {
-    // pressed_time = timer_read32();
     if (!rgb_matrix_config.enable) {
         if (rgb_status_save) {
             rgb_matrix_enable_noeeprom();
@@ -452,8 +274,10 @@ void bt_switch_mode(uint8_t last_mode, uint8_t now_mode, uint8_t reset) {
 
     bool usb_sws = !!last_mode ? !now_mode : !!now_mode;
 
-    extern uint8_t indicator_status;
-    extern uint8_t indicator_reset_last_time;
+    extern uint8_t  indicator_status;
+    extern uint8_t  indicator_reset_last_time;
+    extern uint32_t last_total_time;
+    // extern bool     last_rgb_off_flag;
 
     if (usb_sws) {
         if (!!now_mode) {
@@ -465,9 +289,19 @@ void bt_switch_mode(uint8_t last_mode, uint8_t now_mode, uint8_t reset) {
         }
     }
 
+    // if (!readPin(BT_CABLE_PIN)) {
+    //     last_rgb_off_flag              = dev_info.rgb_off_flag;
+    //     dev_info.rgb_off_flag = false;
+    // }
+    if (dev_info.devs != dev_info.last_devs) {
+        last_total_time = timer_read32();
+    }
     dev_info.devs = now_mode;
     if ((dev_info.devs != DEVS_USB) && (dev_info.devs != DEVS_2_4G)) {
         dev_info.last_devs = dev_info.devs;
+    } else if (dev_info.devs == DEVS_USB) {
+        USB_switch_time = timer_read32();
+        USB_blink_cnt   = 0;
     }
     if (dev_info.devs == DEVS_USB) {
         writePinLow(A14);
@@ -486,249 +320,80 @@ void bt_switch_mode(uint8_t last_mode, uint8_t now_mode, uint8_t reset) {
     switch (dev_info.devs) {
         case DEVS_HOST1: {
             if (reset != false) {
-                indicator_status = LED_BLE_PAIR;
+                indicator_status          = 1;
                 indicator_reset_last_time = true;
                 // bts_send_name(DEVS_HOST1);
                 // bts_send_vendor(v_host1);
                 bts_send_vendor(v_pair);
-            } else if (last_mode != DEVS_HOST1) {
-                indicator_status = LED_BLE_CONN;
+            } else {
+                indicator_status          = 2;
                 indicator_reset_last_time = true;
                 bts_send_vendor(v_host1);
             }
         } break;
         case DEVS_HOST2: {
             if (reset != false) {
-                indicator_status = LED_BLE_PAIR;
-                indicator_reset_last_time = 0;
+                indicator_status          = 1;
+                indicator_reset_last_time = true;
                 // bts_send_name(DEVS_HOST2);
                 // bts_send_vendor(v_host2);
                 bts_send_vendor(v_pair);
-            } else if (last_mode != DEVS_HOST2) {
-                indicator_status = LED_BLE_CONN;
+            } else {
+                indicator_status          = 2;
                 indicator_reset_last_time = true;
                 bts_send_vendor(v_host2);
             }
         } break;
         case DEVS_HOST3: {
             if (reset != false) {
-                indicator_status = LED_BLE_PAIR;
+                indicator_status          = 1;
                 indicator_reset_last_time = true;
                 // bts_send_name(DEVS_HOST3);
                 // bts_send_vendor(v_host3);
                 bts_send_vendor(v_pair);
-            } else if (last_mode != DEVS_HOST3) {
-                indicator_status = LED_BLE_CONN;
+            } else {
+                indicator_status          = 2;
                 indicator_reset_last_time = true;
                 bts_send_vendor(v_host3);
             }
         } break;
         case DEVS_2_4G: {
             if (reset != false) {
-                indicator_status = LED_BLE_PAIR;
+                indicator_status          = 1;
                 indicator_reset_last_time = true;
                 // bts_send_name(DEVS_2_4G);
                 // bts_send_vendor(v_2_4g);
                 bts_send_vendor(v_pair);
-            } else if (last_mode != DEVS_2_4G) {
-                indicator_status = LED_BLE_CONN;
+            } else {
+                indicator_status          = 2;
                 indicator_reset_last_time = true;
                 bts_send_vendor(v_2_4g);
             }
         } break;
         case DEVS_USB: {
+            indicator_status          = 2;
+            indicator_reset_last_time = true;
             bts_send_vendor(v_usb);
         } break;
         default:
             break;
     }
 }
-typedef struct {
-    bool dir;
-    bool pressed;
-} move_t;
-typedef struct {
-    bool dir;
-    bool pressed;
-} wheel_t;
-typedef struct {
-    uint16_t pressed_time;
-    move_t   move_x;
-    move_t   move_y;
-    wheel_t  wheel_x;
-    wheel_t  wheel_y;
-    uint8_t  data[5];
-} bt_mousekey_t;
-static bt_mousekey_t bt_mousekey;
 
-uint16_t bt_mousekey_move_send_time;
-uint16_t bt_mousekey_wheel_send_time;
-// static uint8_t bt_mousekey_send_speed;
-
-void bt_mousekey_task(void) {
-    if (bt_mousekey.move_x.pressed || bt_mousekey.move_y.pressed) {
-        if (bt_mousekey.move_x.pressed) {
-            if (bt_mousekey.move_x.dir)
-                bt_mousekey.data[1] = 0xfe;
-            else
-                bt_mousekey.data[1] = 0x02;
-        } else {
-            bt_mousekey.data[1] = 0;
-        }
-        if (bt_mousekey.move_y.pressed) {
-            if (bt_mousekey.move_y.dir)
-                bt_mousekey.data[2] = 0xfe;
-            else
-                bt_mousekey.data[2] = 0x02;
-        } else {
-            bt_mousekey.data[2] = 0;
-        }
-        bt_mousekey.data[4] = 0;
-        bt_mousekey.data[3] = 0;
-        if (timer_elapsed(bt_mousekey_move_send_time) >= 10) {
-            bt_mousekey_move_send_time = timer_read();
-            bts_send_mouse_report(bt_mousekey.data);
-        }
-    }
-    if (bt_mousekey.wheel_x.pressed || bt_mousekey.wheel_y.pressed) {
-        bt_mousekey.data[1] = 0;
-        bt_mousekey.data[2] = 0;
-        if (bt_mousekey.wheel_x.pressed) {
-            if (bt_mousekey.wheel_x.dir)
-                bt_mousekey.data[4] = 0xff;
-            else
-                bt_mousekey.data[4] = 0x01;
-        } else {
-            bt_mousekey.data[4] = 0;
-        }
-        if (bt_mousekey.wheel_y.pressed) {
-            if (bt_mousekey.wheel_y.dir)
-                bt_mousekey.data[3] = 0xfe;
-            else
-                bt_mousekey.data[3] = 0x01;
-        } else {
-            bt_mousekey.data[3] = 0;
-        }
-        if (timer_elapsed(bt_mousekey_wheel_send_time) >= 100) {
-            bt_mousekey_wheel_send_time = timer_read();
-            bts_send_mouse_report(bt_mousekey.data);
-        }
-    }
-}
-
-static uint16_t bt_tap_time;
-static uint32_t EE_CLR_press_cnt  = 0;
-static uint32_t EE_CLR_press_time = 0;
-static uint8_t  EE_CLR_flag       = false;
-bool            query_vol_flag    = false;
-static bool     kb_sleep_flag = false;
-uint8_t         all_blink_cnt;
-uint32_t        all_blink_time;
-uint8_t         single_blink_cnt;
-uint8_t         single_blink_index;
-RGB      single_blink_color;
-uint32_t single_blink_time;
-
-bool bt_mode_sw_get(void) {
-    if(readPin(BT_MODE_SW_PIN) == BT_MODE_SW_TRUE) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-void led_status_set(bool status) {
-    // extern bool rgb_status_save;
-    // switch (rgb_matrix_get_flags()) {
-    //     case LED_FLAG_ALL: {
-    //         rgb_matrix_set_flags(LED_FLAG_NONE);
-    //         rgb_matrix_set_color_all(RGB_OFF);
-    //         // rgb_status_save = 0;
-    //     } break;
-
-    //     default: {
-    //         rgb_matrix_set_flags(LED_FLAG_ALL);
-    //         // rgb_status_save = 1;
-    //     } break;
-    // }
-
-    // if (dev_info.led_status == false) {
-    if (status == false) {
-        rgb_matrix_set_flags(LED_FLAG_NONE);
-        rgb_matrix_set_color_all(RGB_OFF);
-    } else {
-        rgb_matrix_set_flags(LED_FLAG_ALL);
-    }
-}
-
-void led_status_set_sw(void) {
-    // static bool init = false;
-    static bool bt_mode_sw_prev = false;
-    bool bt_mode_sw_curr = bt_mode_sw_get();
-
-    if(bt_mode_sw_prev != bt_mode_sw_curr) {
-        bt_mode_sw_prev = bt_mode_sw_curr;
-
-        // if(bt_mode_sw_curr) {
-        //     rgb_matrix_set_flags(LED_FLAG_NONE);
-        //     rgb_matrix_set_color_all(RGB_OFF);
-        // } else {
-        //     rgb_matrix_set_flags(LED_FLAG_ALL);
-        // }
-        led_status_set(!bt_mode_sw_curr);
-    }
-
-    // if(!init) {
-    //     if(bt_mode_sw_get()) {
-    //         // init = true;
-
-    //         rgb_matrix_set_flags(LED_FLAG_NONE);
-    //         rgb_matrix_set_color_all(RGB_OFF);
-    //     } else {
-    //         rgb_matrix_set_flags(LED_FLAG_ALL);
-    //     }
-    // } else {
-    // }
-}
-
-void led_status_set_watch(void) {
-    static bool led_status_prev = false;
-
-    if(led_status_prev != dev_info.led_status) {
-        led_status_prev = dev_info.led_status;
-
-        led_status_set(led_status_prev);
-    }
-}
-
-// void rgb_tog_off(void) {
-//     // extern bool rgb_status_save;
-//     switch (rgb_matrix_get_flags()) {
-//         case LED_FLAG_ALL: {
-//             rgb_matrix_set_flags(LED_FLAG_NONE);
-//             rgb_matrix_set_color_all(RGB_OFF);
-//             // rgb_status_save = 0;
-//         } break;
-
-//         default: {
-//             rgb_matrix_set_flags(LED_FLAG_ALL);
-//             // rgb_status_save = 1;
-//         } break;
-//     }
-// }
-
-void sleep_time_index_set(void) {
-    // dev_info.sleep_time_index = (dev_info.sleep_time_index + 1) % 3;
-
-    // all_blink_time  = timer_read32();
-    // all_blink_cnt   = (dev_info.sleep_time_index + 1) * 2;
-
-
-    // if (dev_info.sleep_time_index )
-    dev_info.sleep_time_index++;
-
-    led_single_blink_set((dev_info.sleep_time_index + 1) * 2, LED_SLEEP, RGB_BLUE);
-}
+static uint32_t factory_reset_press_time = 0;
+static uint8_t  factory_reset_status;
+static uint8_t  factory_reset_press_cnt;
+static uint8_t  all_blink_cnt;
+static uint32_t all_blink_time;
+static RGB      all_blink_color;
+static uint8_t  single_blink_cnt;
+static uint8_t  single_blink_index;
+static RGB      single_blink_color;
+static uint32_t single_blink_time;
+// static uint32_t single_light_on_time;
+// static uint8_t single_light_on_index;
+// static RGB single_light_on_color;
+bool query_vol_flag = false;
 
 static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
     for (uint8_t i = 0; i < NUM_LONG_PRESS_KEYS; i++) {
@@ -742,82 +407,27 @@ static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
         }
     }
 
+    if (!readPin(BT_MODE_SW_PIN)) {
+        if (keycode == BT_HOST1 || keycode == BT_HOST2 || keycode == BT_HOST3 || keycode == BT_2_4G) {
+            return false; // 禁止在USB模式下切换蓝牙
+        }
+    }
+
     switch (keycode) {
-        // case BT_HOST: {
-        //     if (record->event.pressed) {   
-        //         // if (readPin(!BT_MODE_SW_PIN)) {
-        //         if (bt_mode_sw_get()) {
-        //             if (dev_info.devs == DEVS_USB || dev_info.devs == DEVS_2_4G || dev_info.devs == DEVS_HOST3) {
-        //                 bt_switch_mode(dev_info.devs, DEVS_HOST1, false);
-        //             } else if (dev_info.devs == DEVS_HOST1) {
-        //                 bt_switch_mode(dev_info.devs, DEVS_HOST2, false);
-        //             } else if (dev_info.devs == DEVS_HOST2) {
-        //                 bt_switch_mode(dev_info.devs, DEVS_HOST3, false);
-        //             }
-        //         } else {
-        //         }
-        //     }
-        // } break;
-
-        // case BT_PAIR: {
-        // } break;
-
-        // case EX_PAIR: {
-        //     if (record->event.pressed) {
-        //         if (dev_info.devs != DEVS_USB) {
-        //             bt_switch_mode(DEVS_USB, dev_info.devs, false);
-        //         }
-        //     }
-        // } break;
-        
-        case BT_HOST1: {
-            if (record->event.pressed) {
-                // if ((dev_info.devs != DEVS_HOST1) && (dev_info.devs != DEVS_USB) && (dev_info.devs != DEVS_2_4G)) {
-                if (bt_mode_sw_get()) {
-                    bt_switch_mode(dev_info.devs, DEVS_HOST1, false);
-                    // if(!(dev_info.config.first_boot&(0x1<<0))){
-                    //     bt_switch_mode(dev_info.devs, DEVS_HOST1, true); // BT mode
-                    // }
-                }
-            }
-        } break;
-
-        case BT_HOST2: {
-            if (record->event.pressed) {
-                // if ((dev_info.devs != DEVS_HOST2) && (dev_info.devs != DEVS_USB) && (dev_info.devs != DEVS_2_4G)) {
-                if (bt_mode_sw_get()) {
-                    bt_switch_mode(dev_info.devs, DEVS_HOST2, false);
-                    // if(!(dev_info.config.first_boot&(0x1<<1))){
-                        // bt_switch_mode(dev_info.devs, DEVS_HOST2, true); // BT mode
-                    // }
-                }
-            }
-        } break;
-
-        case BT_HOST3: {
-            if (record->event.pressed) {
-                if (bt_mode_sw_get()) {
-                // if ((dev_info.devs != DEVS_HOST3) && (dev_info.devs != DEVS_USB) && (dev_info.devs != DEVS_2_4G)) {
-                    bt_switch_mode(dev_info.devs, DEVS_HOST3, false);
-                    // if(!(dev_info.config.first_boot&(0x1<<2))){
-                    //     bt_switch_mode(dev_info.devs, DEVS_HOST3, true); // BT mode
-                    // }
-                }
-            }
-        } break;
-
-        case BT_2_4G: {
-            if (record->event.pressed) {
-                if (bt_mode_sw_get()) {
-                    if (dev_info.devs != DEVS_2_4G) {
-                        bt_switch_mode(dev_info.devs, DEVS_2_4G, false);
-                    }
-                }
-            }
-        } break;
+        case BT_HOST1:
+        case BT_HOST2:
+        case BT_HOST3:
+        case BT_2_4G:
         case BT_USB: {
             if (record->event.pressed) {
-                bt_switch_mode(dev_info.devs, DEVS_USB, false);
+                uint8_t target_devs = (keycode == BT_HOST1) ? DEVS_HOST1 : (keycode == BT_HOST2) ? DEVS_HOST2 : (keycode == BT_HOST3) ? DEVS_HOST3 : (keycode == BT_2_4G) ? DEVS_2_4G : DEVS_USB;
+
+                if (dev_info.devs != target_devs) {
+                    bt_switch_mode(dev_info.devs, target_devs, false);
+                    // 更新保存的无线设备（用于开关切换）
+                    switch_saved_wireless_device = target_devs;
+                    last_operation_manual        = true; // 标记为手动操作
+                }
             }
         } break;
         case BT_VOL: {
@@ -828,382 +438,48 @@ static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
                 query_vol_flag = false;
             }
         } break;
-
-        case SLEEP_EN: {
+        case NK_TOGG: {
             if (record->event.pressed) {
-                sleep_time_index_set();
+                if (record->event.pressed) {
+                    if (keymap_config.nkro) {
+                        single_blink_cnt   = 6;
+                        single_blink_index = 0;
+                        single_blink_color = (RGB){100, 100, 100};
+                        single_blink_time  = timer_read32();
+                    } else {
+                        single_blink_cnt   = 6;
+                        single_blink_index = 0;
+                        single_blink_time  = timer_read32();
+                        single_blink_color = (RGB){0, 0, 100};
+                    }
+                }
             }
-        } break;
-
-        case RGB_TEST: {
-            if (record->event.pressed) {
-                extern uint8_t rgb_test_en;
-                rgb_test_en = !rgb_test_en;
-            }
-        } break;
-
-        case RGB_TOG:{
-            if (record->event.pressed) {
-                // rgb_tog_off();
-                dev_info.led_status = !dev_info.led_status;
-            }
-        } return false;
-
-        case EE_CLR: {
-        } break;
-        // case GU_TOGG:
-        // case SW_OS: // OS switch key
+        }
+            return true;
+        // case SW_OS: {
         //     if (record->event.pressed) {
         //         if (get_highest_layer(default_layer_state) == 0) { // WIN_BASE
-        //             set_single_persistent_default_layer(1);
-        //         } else if (get_highest_layer(default_layer_state) == 1) { // MAC_BASE
+        //             set_single_persistent_default_layer(2);
+        //             keymap_config.no_gui = 0;
+        //             eeconfig_update_keymap(&keymap_config);
+        //             single_blink_time  = timer_read32();
+        //             single_blink_cnt   = 6;
+        //             single_blink_index = 20;
+        //             single_blink_color = (RGB){100, 100, 100};
+        //         } else if (get_highest_layer(default_layer_state) == 2) { // MAC_BASE
         //             set_single_persistent_default_layer(0);
+        //             single_blink_time  = timer_read32();
+        //             single_blink_cnt   = 6;
+        //             single_blink_index = 20;
+        //             single_blink_color = (RGB){100, 100, 100};
         //         }
         //     }
-        //     break;
-        case QK_GRAVE_ESCAPE:
-            if (dev_info.devs) {
-                if (record->event.pressed) {
-                    if ((get_mods() & MOD_MASK_SG)) {
-                        bts_process_keys(KC_GRAVE, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                    } else {
-                        bts_process_keys(KC_ESCAPE, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                    }
-                } else {
-                    bts_process_keys(KC_GRAVE, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                    bts_process_keys(KC_ESCAPE, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                }
-            }
-            return true; // Skip all further processing of this key
-        case LM(1, MOD_LCTL):
-        case LM(2, MOD_LCTL):
-        case LM(3, MOD_LCTL):
-            if (dev_info.devs) {
-                bts_process_keys(KC_LCTL, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
-            return true;
-        case LM(1, MOD_LSFT):
-        case LM(2, MOD_LSFT):
-        case LM(3, MOD_LSFT):
-            if (dev_info.devs) {
-                bts_process_keys(KC_LSFT, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
-            return true;
-        case LM(1, MOD_LALT):
-        case LM(2, MOD_LALT):
-        case LM(3, MOD_LALT):
-            if (dev_info.devs) {
-                bts_process_keys(KC_LALT, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
-            return true;
-        case LM(1, MOD_LGUI):
-        case LM(2, MOD_LGUI):
-        case LM(3, MOD_LGUI):
-            if (dev_info.devs) {
-                bts_process_keys(KC_LGUI, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
-            return true;
-        case LM(1, MOD_RCTL):
-        case LM(2, MOD_RCTL):
-        case LM(3, MOD_RCTL):
-            if (dev_info.devs) {
-                bts_process_keys(KC_RCTL, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
-            return true;
-        case LM(1, MOD_RSFT):
-        case LM(2, MOD_RSFT):
-        case LM(3, MOD_RSFT):
-            if (dev_info.devs) {
-                bts_process_keys(KC_RSFT, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
-            return true;
-        case LM(1, MOD_RALT):
-        case LM(2, MOD_RALT):
-        case LM(3, MOD_RALT):
-            if (dev_info.devs) {
-                bts_process_keys(KC_RALT, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
-            return true;
-        case LM(1, MOD_RGUI):
-        case LM(2, MOD_RGUI):
-        case LM(3, MOD_RGUI):
-            if (dev_info.devs) {
-                bts_process_keys(KC_RGUI, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
-            return true;
-        case LT(1, KC_SPC):
-        case LT(2, KC_SPC):
-        case LT(3, KC_SPC):
-            if (dev_info.devs) {
-                if (record->tap.count && record->event.pressed) {
-                    bts_process_keys(KC_SPC, 1, dev_info.devs, keymap_config.no_gui);
-                    bts_task(dev_info.devs);
-                    for (uint16_t i = TAP_CODE_DELAY; i > 0; i--) {
-                        wait_ms(1);
-                    }
-                    bts_process_keys(KC_SPC, 0, dev_info.devs, keymap_config.no_gui);
-                    bts_task(dev_info.devs);
-                    return false; // 通过返回false阻止对该键的其它处理
-                }
-            }
-            return true;
-        case SC_LCPO:
-            if (dev_info.devs) {
-                bts_process_keys(KC_LCTL, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                if (record->event.pressed) {
-                    bt_tap_time = timer_read();
-                } else {
-                    if (timer_elapsed(bt_tap_time) <= 100) {
-                        bts_process_keys(KC_LSFT, 1, dev_info.devs, keymap_config.no_gui);
-                        bts_process_keys(KC_9, 1, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                        // for (uint16_t i = TAP_CODE_DELAY; i > 0; i--) {
-                        //     wait_ms(1);
-                        // }
-                        bts_process_keys(KC_LSFT, 0, dev_info.devs, keymap_config.no_gui);
-                        bts_process_keys(KC_9, 0, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                    }
-                }
-                return false; // 通过返回false阻止对该键的其它处理
-            }
-            return true;
-        case SC_LSPO:
-            if (dev_info.devs) {
-                bts_process_keys(KC_LSFT, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                if (record->event.pressed) {
-                    bt_tap_time = timer_read();
-                } else {
-                    if (timer_elapsed(bt_tap_time) <= 100) {
-                        bts_process_keys(KC_LSFT, 1, dev_info.devs, keymap_config.no_gui);
-                        bts_process_keys(KC_9, 1, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                        // for (uint16_t i = TAP_CODE_DELAY; i > 0; i--) {
-                        //     wait_ms(1);
-                        // }
-                        bts_process_keys(KC_LSFT, 0, dev_info.devs, keymap_config.no_gui);
-                        bts_process_keys(KC_9, 0, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                    }
-                }
-                return false; // 通过返回false阻止对该键的其它处理
-            }
-            return true;
-        case SC_LAPO:
-            if (dev_info.devs) {
-                bts_process_keys(KC_LALT, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                if (record->event.pressed) {
-                    bt_tap_time = timer_read();
-                } else {
-                    if (timer_elapsed(bt_tap_time) <= 100) {
-                        bts_process_keys(KC_LSFT, 1, dev_info.devs, keymap_config.no_gui);
-                        bts_process_keys(KC_9, 1, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                        // for (uint16_t i = TAP_CODE_DELAY; i > 0; i--) {
-                        //     wait_ms(1);
-                        // }
-                        bts_process_keys(KC_LSFT, 0, dev_info.devs, keymap_config.no_gui);
-                        bts_process_keys(KC_9, 0, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                    }
-                }
-                return false; // 通过返回false阻止对该键的其它处理
-            }
-            return true;
-        case SC_RCPC:
-            if (dev_info.devs) {
-                bts_process_keys(KC_RCTL, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                if (record->event.pressed) {
-                    bt_tap_time = timer_read();
-                } else {
-                    if (timer_elapsed(bt_tap_time) <= 100) {
-                        bts_process_keys(KC_RSFT, 1, dev_info.devs, keymap_config.no_gui);
-                        bts_process_keys(KC_0, 1, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                        // for (uint16_t i = TAP_CODE_DELAY; i > 0; i--) {
-                        //     wait_ms(1);
-                        // }
-                        bts_process_keys(KC_RSFT, 0, dev_info.devs, keymap_config.no_gui);
-                        bts_process_keys(KC_0, 0, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                    }
-                }
-                return false; // 通过返回false阻止对该键的其它处理
-            }
-            return true;
-        case SC_RSPC:
-            if (dev_info.devs) {
-                bts_process_keys(KC_RSFT, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                if (record->event.pressed) {
-                    bt_tap_time = timer_read();
-                } else {
-                    if (timer_elapsed(bt_tap_time) <= 100) {
-                        bts_process_keys(KC_RSFT, 1, dev_info.devs, keymap_config.no_gui);
-                        bts_process_keys(KC_0, 1, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                        // for (uint16_t i = TAP_CODE_DELAY; i > 0; i--) {
-                        //     wait_ms(1);
-                        // }
-                        bts_process_keys(KC_RSFT, 0, dev_info.devs, keymap_config.no_gui);
-                        bts_process_keys(KC_0, 0, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                    }
-                }
-                return false; // 通过返回false阻止对该键的其它处理
-            }
-            return true;
-        case SC_RAPC:
-            if (dev_info.devs) {
-                bts_process_keys(KC_RALT, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                if (record->event.pressed) {
-                    bt_tap_time = timer_read();
-                } else {
-                    if (timer_elapsed(bt_tap_time) <= 100) {
-                        bts_process_keys(KC_RSFT, 1, dev_info.devs, keymap_config.no_gui);
-                        bts_process_keys(KC_0, 1, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                        // for (uint16_t i = TAP_CODE_DELAY; i > 0; i--) {
-                        //     wait_ms(1);
-                        // }
-                        bts_process_keys(KC_RSFT, 0, dev_info.devs, keymap_config.no_gui);
-                        bts_process_keys(KC_0, 0, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                    }
-                }
-                return false; // 通过返回false阻止对该键的其它处理
-            }
-            return true;
-        case SC_SENT:
-            if (dev_info.devs) {
-                bts_process_keys(KC_RSFT, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                if (record->event.pressed) {
-                    bt_tap_time = timer_read();
-                } else {
-                    if (timer_elapsed(bt_tap_time) <= 100) {
-                        bts_process_keys(KC_ENT, 1, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                        // for (uint16_t i = TAP_CODE_DELAY; i > 0; i--) {
-                        //     wait_ms(1);
-                        // }
-                        bts_process_keys(KC_ENT, 0, dev_info.devs, keymap_config.no_gui);
-                        bts_task(dev_info.devs);
-                    }
-                }
-                return false; // 通过返回false阻止对该键的其它处理
-            }
-            return true;
-        case KC_MS_U:
-            if (dev_info.devs) {
-                if (record->event.pressed) {
-                    bt_mousekey.move_y.pressed = 1;
-                    bt_mousekey.move_y.dir     = 1;
-                    // if (!bt_mousekey.pressed_time) bt_mousekey.pressed_time = timer_read();
-                } else {
-                    if (bt_mousekey.move_y.dir) {
-                        bt_mousekey.move_y.pressed = 0;
-                        // bt_mousekey.pressed_time   = 0;
-                    }
-                }
-                return false;
-            }
-            return true;
-        case KC_MS_D:
-            if (dev_info.devs) {
-                if (record->event.pressed) {
-                    bt_mousekey.move_y.pressed = 1;
-                    bt_mousekey.move_y.dir     = 0;
-                    // if (!bt_mousekey.pressed_time) bt_mousekey.pressed_time = timer_read();
-                } else {
-                    if (!bt_mousekey.move_y.dir) {
-                        bt_mousekey.move_y.pressed = 0;
-                        // bt_mousekey.pressed_time   = 0;
-                    }
-                }
-                return false;
-            }
-            return true;
-        case KC_MS_L:
-            if (dev_info.devs) {
-                if (record->event.pressed) {
-                    bt_mousekey.move_x.pressed = 1;
-                    bt_mousekey.move_x.dir     = 1;
-                    // if (!bt_mousekey.pressed_time) bt_mousekey.pressed_time = timer_read();
-                } else {
-                    if (bt_mousekey.move_x.dir) {
-                        bt_mousekey.move_x.pressed = 0;
-                        // bt_mousekey.pressed_time   = 0;
-                    }
-                }
-                return false;
-            }
-            return true;
-        case KC_MS_R:
-            if (dev_info.devs) {
-                if (record->event.pressed) {
-                    bt_mousekey.move_x.pressed = 1;
-                    bt_mousekey.move_x.dir     = 0;
-                    // if (!bt_mousekey.pressed_time) bt_mousekey.pressed_time = timer_read();
-                } else {
-                    if (!bt_mousekey.move_x.dir) {
-                        bt_mousekey.move_x.pressed = 0;
-                        // bt_mousekey.pressed_time   = 0;
-                    }
-                }
-                return false;
-            }
-            return true;
-        case KC_WH_U:
-            if (dev_info.devs) {
-                if (record->event.pressed) {
-                    bt_mousekey.wheel_y.pressed = 1;
-                    bt_mousekey.wheel_y.dir     = 0;
-                    // if (!bt_mousekey.pressed_time) bt_mousekey.pressed_time = timer_read();
-                } else {
-                    bt_mousekey.wheel_y.pressed = 0;
-                    // bt_mousekey.pressed_time   = 0;
-                }
-                return false;
-            }
-            return true;
-        case KC_WH_D:
-            if (dev_info.devs) {
-                if (record->event.pressed) {
-                    bt_mousekey.wheel_y.pressed = 1;
-                    bt_mousekey.wheel_y.dir     = 1;
-                    // if (!bt_mousekey.pressed_time) bt_mousekey.pressed_time = timer_read();
-                } else {
-                    bt_mousekey.wheel_y.pressed = 0;
-                    // bt_mousekey.pressed_time   = 0;
-                }
-                return false;
-            }
-            return true;
-        case KC_WH_L:
-            if (dev_info.devs) {
-                if (record->event.pressed) {
-                    bt_mousekey.wheel_x.pressed = 1;
-                    bt_mousekey.wheel_x.dir     = 1;
-                    // if (!bt_mousekey.pressed_time) bt_mousekey.pressed_time = timer_read();
-                } else {
-                    bt_mousekey.wheel_x.pressed = 0;
-                    // bt_mousekey.pressed_time   = 0;
-                }
-                return false;
-            }
-            return true;
-        case KC_WH_R:
-            if (dev_info.devs) {
-                if (record->event.pressed) {
-                    bt_mousekey.wheel_x.pressed = 1;
-                    bt_mousekey.wheel_x.dir     = 0;
-                    // if (!bt_mousekey.pressed_time) bt_mousekey.pressed_time = timer_read();
-                } else {
-                    bt_mousekey.wheel_x.pressed = 0;
-                    // bt_mousekey.pressed_time   = 0;
-                }
-                return false;
-            }
-            return true;
+        // } break;
+        case FACTORY_RESET:
+        case KEYBOARD_RESET:
+        case BLE_RESET:
+            // case SW_OS: // OS switch key
+            break;
         default:
             return true;
     }
@@ -1218,99 +494,65 @@ static void long_pressed_keys_cb(uint16_t keycode) {
                 bt_switch_mode(dev_info.devs, DEVS_HOST1, true);
             }
         } break;
-
         case BT_HOST2: {
             if (dev_info.devs == DEVS_HOST2) {
                 bt_switch_mode(dev_info.devs, DEVS_HOST2, true);
             }
         } break;
-
         case BT_HOST3: {
             if (dev_info.devs == DEVS_HOST3) {
                 bt_switch_mode(dev_info.devs, DEVS_HOST3, true);
             }
         } break;
-
         case BT_2_4G: {
             if (dev_info.devs == DEVS_2_4G) {
                 bt_switch_mode(dev_info.devs, DEVS_2_4G, true);
             }
         } break;
-
-        // case BT_PAIR: {
-        //     if (dev_info.devs != DEVS_USB) {
-        //         bt_switch_mode(DEVS_USB, dev_info.devs, true);
-        //     }
-        // } break;
-        // case BT_2_4G: {
-        //     if (dev_info.devs == DEVS_2_4G) {
-        //         bt_switch_mode(DEVS_USB, DEVS_2_4G, true);
-        //     }
-        // } break;
-        // case GU_TOGG: {
-        //     keymap_config.no_gui = !keymap_config.no_gui;
-        // } break;
         // case SW_OS: {
         //     if (get_highest_layer(default_layer_state) == 0) { // WIN_BASE
-        //         set_single_persistent_default_layer(1);
-        //         // keymap_config.no_gui = 0;
-        //         // eeconfig_update_keymap(keymap_config.raw);
-        //         all_blink_time  = timer_read32();
-        //         all_blink_cnt   = 6;
-        //     } else if (get_highest_layer(default_layer_state) == 1) { // MAC_BASE
+        //         set_single_persistent_default_layer(2);
+        //         keymap_config.no_gui = 0;
+        //         eeconfig_update_keymap(&keymap_config);
+        //         single_blink_time  = timer_read32();
+        //         single_blink_cnt   = 6;
+        //         single_blink_index = 69;
+        //         single_blink_color = (RGB){100, 100, 100};
+        //     } else if (get_highest_layer(default_layer_state) == 2) { // MAC_BASE
         //         set_single_persistent_default_layer(0);
-        //         all_blink_time  = timer_read32();
-        //         all_blink_cnt   = 6;
+        //         single_blink_time  = timer_read32();
+        //         single_blink_cnt   = 6;
+        //         single_blink_index = 68;
+        //         single_blink_color = (RGB){100, 100, 100};
         //     }
         // } break;
-        case NL_OFF: {
-            dev_info.num_lock_off = !dev_info.num_lock_off;
-            eeconfig_update_user(dev_info.raw);
-            all_blink_time  = timer_read32();
-            all_blink_cnt   = 2;
-        } break;
-        // case RGB_TEST: {
-        //     if (dev_info.devs == DEVS_USB) {
-        //         extern uint8_t rgb_test_en;
-        //         extern uint8_t rgb_test_index;
-
-        //         if (rgb_test_en != true) {
-        //             rgb_test_en    = true;
-        //             rgb_test_index = 1;
-        //         }
-        //     }
-        // } break;
-
-        case RST_ALL: {
-            if (!EE_CLR_flag) {
-                EE_CLR_flag       = _RST_ALL;
-                EE_CLR_press_time = timer_read32();
-                EE_CLR_press_cnt  = 1;
+        case FACTORY_RESET: {
+            if (!factory_reset_status) {
+                factory_reset_status    = 1;
+                factory_reset_press_cnt = 1;
                 rgb_matrix_enable_noeeprom();
-                rgb_status_save = rgb_matrix_config.enable;
+                rgb_status_save          = rgb_matrix_config.enable;
+                factory_reset_press_time = timer_read32();
             }
         } break;
-
-        case RST_LYR: {
-            if (!EE_CLR_flag) {
-                EE_CLR_flag       = _RST_LYR;
-                EE_CLR_press_time = timer_read32();
-                EE_CLR_press_cnt  = 1;
+        case KEYBOARD_RESET: {
+            if (!factory_reset_status) {
+                factory_reset_status    = 2;
+                factory_reset_press_cnt = 1;
                 rgb_matrix_enable_noeeprom();
-                rgb_status_save = rgb_matrix_config.enable;
+                rgb_status_save          = rgb_matrix_config.enable;
+                factory_reset_press_time = timer_read32();
             }
         } break;
-
-        case RST_BLE: {
-            if (!EE_CLR_flag) {
-                EE_CLR_flag       = _RST_BLE;
-                EE_CLR_press_time = timer_read32();
-                EE_CLR_press_cnt  = 1;
+        case BLE_RESET: {
+            if (!factory_reset_status) {
+                factory_reset_status    = 3;
+                factory_reset_press_cnt = 1;
                 rgb_matrix_enable_noeeprom();
-                rgb_status_save = rgb_matrix_config.enable;
+                rgb_status_save          = rgb_matrix_config.enable;
+                factory_reset_press_time = timer_read32();
             }
         } break;
-
         default:
             break;
     }
@@ -1318,20 +560,9 @@ static void long_pressed_keys_cb(uint16_t keycode) {
 
 static void long_pressed_keys_hook(void) {
     for (uint8_t i = 0; i < NUM_LONG_PRESS_KEYS; i++) {
-        switch (long_pressed_keys[i].keycode) {
-            case NL_OFF:{
-                if ((long_pressed_keys[i].press_time != 0) && (timer_elapsed32(long_pressed_keys[i].press_time) >= (1 * 1000))) {
-                    long_pressed_keys[i].event_cb(long_pressed_keys[i].keycode);
-                    long_pressed_keys[i].press_time = 0;
-                }
-            } break;
-
-            default:{
-                if ((long_pressed_keys[i].press_time != 0) && (timer_elapsed32(long_pressed_keys[i].press_time) >= (3 * 1000))) {
-                    long_pressed_keys[i].event_cb(long_pressed_keys[i].keycode);
-                    long_pressed_keys[i].press_time = 0;
-                }
-            } break;
+        if ((long_pressed_keys[i].press_time != 0) && (timer_elapsed32(long_pressed_keys[i].press_time) >= (3 * 1000))) {
+            long_pressed_keys[i].event_cb(long_pressed_keys[i].keycode);
+            long_pressed_keys[i].press_time = 0;
         }
     }
 }
@@ -1355,72 +586,74 @@ static void bt_used_pin_init(void) {
  */
 static void bt_scan_mode(void) {
 #ifdef BT_MODE_SW_PIN
-    // if (readPin(BT_MODE_SW_PIN) && !readPin(RF_MODE_SW_PIN)) {
-    //     if ((dev_info.devs == DEVS_USB) || (dev_info.devs == DEVS_2_4G)) {
-    //         bt_switch_mode(dev_info.devs, dev_info.last_devs, false); // BT mode
-    //         mcu_reset();
-    //     }
-    // }
-    // if (readPin(RF_MODE_SW_PIN) && !readPin(BT_MODE_SW_PIN)) {
-    //     if (dev_info.devs != DEVS_2_4G) {
-    //         bt_switch_mode(dev_info.devs, DEVS_2_4G, false); // 2_4G mode
-    //         mcu_reset();
-    //     }
-    // }
-    // if (readPin(BT_MODE_SW_PIN) && readPin(RF_MODE_SW_PIN)) {
-    //     if (dev_info.devs != DEVS_USB) bt_switch_mode(dev_info.devs, DEVS_USB, false); // usb mode
-    // }
+    static uint8_t last_pin_status    = 0;
+    static uint8_t current_pin_status = 0;
+    current_pin_status                = readPin(BT_MODE_SW_PIN);
 
-    // if (readPin(BT_MODE_SW_PIN) == BT_MODE_SW_TRUE) {
-    if (bt_mode_sw_get()) {
-        // if ((dev_info.devs == DEVS_USB) || (dev_info.devs == DEVS_2_4G)) {
-        //     bt_switch_mode(dev_info.devs, dev_info.last_devs, false); // BT mode
-        //     mcu_reset();
-        // }
+    if (last_pin_status != current_pin_status) {
+        last_pin_status = current_pin_status;
+        // last_operation_manual = false; // 开关操作，非手动
+
+        if (current_pin_status) {
+            // 开关ON
+            if (dev_info.devs == DEVS_USB && !last_operation_manual) {
+                bt_switch_mode(dev_info.devs, switch_saved_wireless_device, false);
+                BT_DEBUG_INFO("Switch ON: USB -> %d\n", switch_saved_wireless_device);
+            } else if (last_operation_manual) {
+                BT_DEBUG_INFO("Switch ON: keeping USB (manual mode)\n");
+            }
+        } else {
+            // 开关OFF
+            if (dev_info.devs != DEVS_USB) {
+                switch_saved_wireless_device = dev_info.devs;
+                bt_switch_mode(dev_info.devs, DEVS_USB, false);
+                BT_DEBUG_INFO("Switch OFF: %d -> USB (saved)\n", switch_saved_wireless_device);
+            }
+        }
+        // 开关操作后重置手动标志
+        last_operation_manual = false;
     } else {
-        if (dev_info.devs != DEVS_USB) {
-            bt_switch_mode(dev_info.devs, DEVS_USB, false); // usb mode
+        // 开关状态没有变化，检查是否需要更新保存的设备
+        if (current_pin_status && dev_info.devs != DEVS_USB && !last_operation_manual) {
+            // 开关在ON位置，当前是无线设备，且不是手动操作导致的
+            switch_saved_wireless_device = dev_info.devs;
         }
     }
-
-    // uint8_t now_mode = false; // 高电平为USB模式
-    // // uint8_t now_mode = true; // low电平为USB模式
-    // uint8_t usb_sws  = false;
-
-    // now_mode = readPin(BT_MODE_SW_PIN);
-    // usb_sws  = !!dev_info.devs ? !now_mode : now_mode;
-
-    // if (usb_sws) {
-    //     if (now_mode) {
-    //         bt_switch_mode(dev_info.devs, dev_info.last_devs, false); // ble mode
-    //     } else {
-    //         bt_switch_mode(dev_info.devs, DEVS_USB, false); // usb mode
-    //     }
-    // }
+#endif
+#ifdef FORCE_USB
+    static bool    cable_status; // 1为插入，0为断开
+    static bool    cable_old_status;
+    static uint8_t current_devs = 0;
+    cable_status                = !readPin(BT_CABLE_PIN);
+    current_devs                = dev_info.devs;
+    if (cable_old_status != cable_status) {
+        cable_old_status = cable_status;
+        if (cable_status) { // 当USB从断开到连接状态时，回到有线状态
+            if (dev_info.devs != DEVS_USB) bt_switch_mode(dev_info.devs, DEVS_USB, false);
+        } else {
+            bt_switch_mode(dev_info.devs, dev_info.last_devs, false);
+        }
+    }
 #endif
 }
 
-#ifdef RGB_MATRIX_ENABLE
-static uint32_t key_press_time;
-static uint32_t close_rgb_time;
-static bool     bak_rgb_toggle;
-static bool     sober         = true;
-extern bool     led_inited;
-extern void     led_config_all(void);
-extern void     led_deconfig_all(void);
-
-
-const uint8_t sleep_time_table[4] = {10, 30, 60, 0};
-
-static const uint8_t rgb_index_table[] = {
-    LED_USB, LED_BT1, LED_BT2, LED_BT3, LED_2G,
-};
-
-static const uint8_t rgb_index_color_table[][3] = {
-    {RGB_BLUE}, {RGB_BLUE}, {RGB_BLUE}, {RGB_BLUE}, {RGB_GREEN}
-};
+void bt_bat_low_indicator(void) {
+    if (!kb_sleep_flag && (indicator_status == 0) && bts_info.bt_info.pvol < 20) {
+        single_blink_cnt   = 6;
+        single_blink_index = 0;
+        single_blink_color = (RGB){100, 0, 0}; // 红色
+        single_blink_time  = timer_read32();
+        // if (Low_power_blink_time && timer_elapsed(Low_power_blink_time) < (5 * 1000)) {
+            // rgb_matrix_set_color(22, 100, 0, 0);
+        // } else {
+            // Low_power_blink_time = 0;
+        // }
+    }
+}
 
 void led_off_standby(void) {
+#define led_off_standby_timeout (10 * 60 * 1000)
+
     if (timer_elapsed32(key_press_time) >= led_off_standby_timeout) {
         rgb_matrix_disable_noeeprom();
     } else {
@@ -1437,7 +670,7 @@ static void close_rgb(void) {
     led_off_standby();
 
     if (sober) {
-        if (kb_sleep_flag || ((timer_elapsed32(key_press_time) >= sleep_time_table[dev_info.sleep_time_index] * TIMEOUT_MINUTE) && (sleep_time_table[dev_info.sleep_time_index] != 0))) {
+        if (kb_sleep_flag || ((timer_elapsed32(key_press_time) >= sleep_time_table[dev_info.config.sleep_mode]) && (sleep_time_table[dev_info.config.sleep_mode] != 0))) {
             bak_rgb_toggle = rgb_matrix_config.enable;
             sober          = false;
             close_rgb_time = timer_read32();
@@ -1452,9 +685,9 @@ static void close_rgb(void) {
                     led_deconfig_all();
                 }
 
-#    ifdef ENTRY_STOP_MODE
+#ifdef ENTRY_STOP_MODE
                 lp_system_sleep();
-#    endif
+#endif
                 extern void open_rgb(void);
                 open_rgb();
             }
@@ -1465,9 +698,14 @@ static void close_rgb(void) {
 void open_rgb(void) {
     key_press_time = timer_read32();
     if (!sober) {
-        writePinHigh(RGB_DRIVER_SDB_PIN);
+#ifdef WS2812_EN_PIN
+        setPinOutput(WS2812_EN_PIN);
+        writePinLow(WS2812_EN_PIN);
+#endif
         if (bak_rgb_toggle) {
-            kb_sleep_flag = false;
+            extern bool low_vol_offed_sleep;
+            kb_sleep_flag       = false;
+            low_vol_offed_sleep = false;
             rgb_matrix_enable_noeeprom();
         }
         if (!led_inited) {
@@ -1475,486 +713,332 @@ void open_rgb(void) {
         }
         sober = true;
     }
+
+    // bt_bat_low_indicator();
 }
 
-void led_bat_fn(void) {
-    rgb_matrix_set_color(BT_VOL_LED, RGB_OFF);
-    if (bts_info.bt_info.pvol > 94) {
-        rgb_matrix_set_color(BT_VOL_LED, RGB_GREEN);
-    } else if (bts_info.bt_info.pvol > 10) {
-        rgb_matrix_set_color(BT_VOL_LED, RGB_YELLOW);
-    } else {
-        rgb_matrix_set_color(BT_VOL_LED, RGB_RED);
+// bool entry_low_pow_flag = false;
+uint32_t last_total_time = 0;
+// bool     last_rgb_off_flag = false;
+
+void bt_led(void) {
+    // if (dev_info.devs != DEVS_USB) {
+    uint8_t         rgb_index      = rgb_index_table[dev_info.devs];
+    static uint32_t last_time      = 0;
+    static uint32_t last_long_time = 0;
+    static uint8_t  last_status    = 0;
+    static bool     rgb_flip       = false;
+    static RGB      rgb            = {0};
+
+    if (last_status != indicator_status) {
+        last_status     = indicator_status;
+        last_total_time = timer_read32();
     }
-}
 
-// void led_bat_set(void) {
-//     static bool  Low_power_blink;
-//     static uint32_t Low_power_time;
-//     // if ((bts_info.bt_info.low_vol) && readPin(BT_CABLE_PIN)) {
-//     if(bts_info.bt_info.pvol < 10) {
-//         rgb_matrix_set_color_all(RGB_OFF);
-//         if (timer_elapsed32(Low_power_time) >= 500) {
-//             Low_power_blink = !Low_power_blink;
-//             Low_power_time = timer_read32();
-//         }
-//         if (Low_power_blink) {
-//             rgb_matrix_set_color(LED_NUM, RGB_RED);
-//         } else {
-//             rgb_matrix_set_color(LED_NUM, RGB_OFF);
-//         }
-//     }
-// }
+    if (indicator_reset_last_time != false) {
+        indicator_reset_last_time = false;
+        last_time                 = 0;
+    }
 
-uint8_t indicator_status = LED_BLE_CONN;
-uint8_t indicator_reset_last_time = false;
+    // if (indicator_status && !readPin(BT_CABLE_PIN)) {
+    // if (rgb_matrix_get_flags() == LED_FLAG_NONE) {
+    // rgb_matrix_set_flags_noeeprom(LED_FLAG_ALL);
+    // if (!rgb_info.rgb_tog_flag) rgb_info.rgb_tog_flag = true;
+    // }
 
+    switch (indicator_status) {
+        case 1: { // 闪烁模式 5Hz 重置
+            if ((last_time == 0) || (timer_elapsed32(last_time) >= 200)) {
+                last_time = timer_read32();
+                rgb_flip  = !rgb_flip;
+                if (rgb_flip) {
+                    rgb.r = rgb_index_color_table[dev_info.devs][0];
+                    rgb.g = rgb_index_color_table[dev_info.devs][1];
+                    rgb.b = rgb_index_color_table[dev_info.devs][2];
+                } else {
+                    rgb = (RGB){.r = 0, .g = 0, .b = 0};
+                }
+            }
 
-void led_ee_clr(void) {
-    rgb_matrix_set_color_all(RGB_OFF);
+            if (bts_info.bt_info.paired) {
+                last_long_time   = timer_read32();
+                indicator_status = 3;
+                break;
+            }
 
-    switch (EE_CLR_flag)
-    {
-        case _RST_ALL:
-            rgb_matrix_set_color(LED_RST_ALL, RGB_WHITE);
-            break;
-        case _RST_LYR:
-            rgb_matrix_set_color(LED_RST_LYR, RGB_WHITE);
-            break;
-        case _RST_BLE:
-            // rgb_matrix_set_color(LED_RST_BLE, RGB_WHITE);
-            rgb_matrix_set_color(LED_P1, RGB_WHITE);
-            rgb_matrix_set_color(LED_P2, RGB_WHITE);
-            rgb_matrix_set_color(LED_P3, RGB_WHITE);
-            break;
+            /* 超时60s退出 */
+            if (timer_elapsed32(last_total_time) >= (60 * 1000)) {
+                indicator_status = 0;
+                kb_sleep_flag    = true;
+            }
+        } break;
+        case 2: { // 闪烁模式 2Hz 回连
+            if ((last_time == 0) || (timer_elapsed32(last_time) >= 500)) {
+                last_time = timer_read32();
+                rgb_flip  = !rgb_flip;
+                if (rgb_flip) {
+                    rgb.r = rgb_index_color_table[dev_info.devs][0];
+                    rgb.g = rgb_index_color_table[dev_info.devs][1];
+                    rgb.b = rgb_index_color_table[dev_info.devs][2];
+                } else {
+                    rgb = (RGB){.r = 0, .g = 0, .b = 0};
+                }
+            }
+            if (bts_info.bt_info.paired) {
+                last_long_time   = timer_read32();
+                indicator_status = 3;
+                break;
+            }
+            if (bts_info.bt_info.come_back_err) {
+                last_time        = timer_read32();
+                indicator_status = 1;
+            }
+            /* 超时60s退出 */
+            if (timer_elapsed32(last_total_time) >= (60 * 1000)) {
+                indicator_status = 0;
+                kb_sleep_flag    = true;
+            }
+        } break;
+        case 3: { // 长亮模式
+            if ((timer_elapsed32(last_long_time) < (2 * 1000))) {
+                rgb.r = rgb_index_color_table[dev_info.devs][0];
+                rgb.g = rgb_index_color_table[dev_info.devs][1];
+                rgb.b = rgb_index_color_table[dev_info.devs][2];
+            } else {
+                Low_power_blink_time = timer_read32();
+                indicator_status     = 0;
+            }
+        } break;
+        case 4: { // 长灭模式
+            rgb = (RGB){.r = 0, .g = 0, .b = 0};
+        } break;
         default:
+            rgb_flip = false;
+            // if (!kb_sleep_flag) {
+            //     if (!bts_info.bt_info.paired) {
+            //         indicator_status = 2;
+            //         if ((dev_info.devs != DEVS_USB) && (dev_info.devs != DEVS_2_4G)) {
+            //             bt_switch_mode(DEVS_USB, dev_info.last_devs, false);
+            //         }
+            //         if (dev_info.devs == DEVS_2_4G) {
+            //             bt_switch_mode(DEVS_USB, DEVS_2_4G, false);
+            //         }
+            //     }
+            // }
             break;
+    }
+    if (indicator_status) {
+        rgb_matrix_set_color(rgb_index, rgb.r, rgb.g, rgb.b);
+    } else {
+        if (rgb_matrix_get_flags() == LED_FLAG_NONE) {
+            rgb_matrix_set_color(rgb_index, 0, 0, 0);
+        }
     }
 }
 
-void kybd_ee_clr_3(void){
-    if (EE_CLR_flag) {
-        if (timer_elapsed32(EE_CLR_press_time) >= EE_CLR_press_cnt * 500) {
-            EE_CLR_press_cnt++;
+void usb_led(void) {
+    // } else {
+    static uint16_t USB_blink_time;
+    static bool     USB_blink;
+    if ((USB_DRIVER.state != USB_ACTIVE)) {
+        if (USB_blink_cnt <= 20) {
+            if (timer_elapsed(USB_blink_time) >= 500) {
+                USB_blink_cnt++;
+                USB_blink      = !USB_blink;
+                USB_blink_time = timer_read();
+            }
+            if (USB_blink) {
+                rgb_matrix_set_color(rgb_index_table[DEVS_USB], 100, 100, 100);
+
+            } else {
+                rgb_matrix_set_color(rgb_index_table[DEVS_USB], 0, 0, 0);
+            }
         }
-        if (EE_CLR_press_cnt >= 7) {
-            // uint8_t layer_save = get_highest_layer(default_layer_state);
-            switch (EE_CLR_flag)
-            {
-                case _RST_ALL:{
+        USB_switch_time = timer_read32();
+    } else {
+        if (timer_elapsed32(USB_switch_time) < 3000) {
+            rgb_matrix_set_color(rgb_index_table[DEVS_USB], 100, 100, 100);
+        }
+    }
+    // }
+}
+
+uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
+    uint32_t detect_charge_pin_time = 0;
+
+    // FN 按下时显示当前设备状态
+    if ((get_highest_layer(default_layer_state | layer_state) == 1) || (get_highest_layer(default_layer_state | layer_state) == 3)) {
+        rgb_matrix_set_color(rgb_index_table[dev_info.devs], RGB_BLUE);
+    } else if (rgb_matrix_get_flags() == LED_FLAG_NONE) {
+        rgb_matrix_set_color(rgb_index_table[dev_info.devs], 0, 0, 0);
+    }
+
+    if (factory_reset_status) {
+        if (timer_elapsed32(factory_reset_press_time) >= factory_reset_press_cnt * 500) {
+            factory_reset_press_cnt++;
+        }
+        if (factory_reset_press_cnt >= 7) {
+            switch (factory_reset_status) {
+                case 1: // factory reset
                     eeconfig_init();
-                    eeconfig_update_rgb_matrix_default();
-                    set_single_persistent_default_layer(0);
-                    keymap_config.no_gui = 0;
-                    eeconfig_update_keymap(keymap_config.raw);
-                    if (dev_info.devs != DEVS_2_4G){
+                    // eeconfig_update_rgb_matrix_default();
+                    dev_info.config.eco_off_flag = false;
+                    eeconfig_update_user(dev_info.raw);
+                    if (readPin(BT_MODE_SW_PIN) && (dev_info.devs != DEVS_USB)) {
                         bts_send_vendor(v_clear);
+                        bts_info.bt_info.pairing = false;
+                        bt_switch_mode(DEVS_HOST1, DEVS_USB, false);
+                        last_total_time  = timer_read32();
+                        indicator_status = 2;
                     }
-                    dev_info.led_status = false;
-                    led_status_set(false);
-                } break;
 
-                case _RST_LYR:
-                    eeconfig_init();
-                    eeconfig_update_rgb_matrix_default();
-                    set_single_persistent_default_layer(0);
-                    keymap_config.no_gui = 0;
-                    eeconfig_update_keymap(keymap_config.raw);
                     break;
-
-                case _RST_BLE:
-                    if (dev_info.devs != DEVS_2_4G){
+                case 2: // keyboard reset
+                    eeconfig_init();
+                    break;
+                case 3: // ble reset
+                    if (readPin(BT_MODE_SW_PIN) && (dev_info.devs != DEVS_USB) && (dev_info.devs != DEVS_2_4G)) {
                         bts_send_vendor(v_clear);
+                        bts_info.bt_info.pairing = false;
                         bt_switch_mode(dev_info.devs, DEVS_HOST1, false);
+                        last_total_time  = timer_read32();
+                        indicator_status = 2;
                     }
                     break;
                 default:
                     break;
             }
-            EE_CLR_press_time = 0;
-            EE_CLR_press_cnt  = 0;
-            EE_CLR_flag       = false;
+            factory_reset_press_cnt  = 0;
+            factory_reset_status     = 0;
+            factory_reset_press_time = 0;
         }
-
-        led_ee_clr();
-
-        // if (EE_CLR_press_cnt & 0x1) {
-        //     if (EE_CLR_press_cnt == 1) {
-        //         rgb_matrix_set_color_all(RGB_RED);
-        //     } else if (EE_CLR_press_cnt == 3) {
-        //         rgb_matrix_set_color_all(RGB_BLUE);
-        //     } else if (EE_CLR_press_cnt == 5) {
-        //         rgb_matrix_set_color_all(RGB_GREEN);
-        //     }
-        // } else {
-        //     rgb_matrix_set_color_all(RGB_OFF);
-        // }
-        // return false;
-    }
-}
-
-static uint8_t  pairing_blink_cnt;
-static uint32_t pairing_blink_time;
-static RGB      pairing_blink_color;
-
-void led_pair_blink(void) {
-    if (pairing_blink_cnt) { // Pairing mode
-        rgb_matrix_set_color_all(RGB_OFF);
-        if (timer_elapsed32(pairing_blink_time) > 1000) {
-            pairing_blink_time = timer_read32();
-            pairing_blink_cnt--;
-        }
-        if (pairing_blink_cnt % 2) {
-            rgb_matrix_set_color_all(pairing_blink_color.r, pairing_blink_color.g, pairing_blink_color.b);
-        } else {
-            rgb_matrix_set_color_all(RGB_OFF);
-        }
-    }
-}
-
-static uint16_t Low_power_blink_time;
-
-void led_ble(void) {
-    // if (dev_info.devs != DEVS_USB) {
-        uint8_t         rgb_index       = rgb_index_table[dev_info.devs];
-        static uint32_t last_time       = 0;
-        static uint32_t last_long_time  = 0;
-        static uint32_t last_total_time = 0;
-        static uint8_t  last_status     = 0;
-        static bool     rgb_flip        = false;
-        static RGB      rgb             = {0};
-
-        if (last_status != indicator_status) {
-            last_status     = indicator_status;
-            last_total_time = timer_read32();
-        }
-
-        if (indicator_reset_last_time != false) {
-            indicator_reset_last_time = false;
-            last_time                 = 0;
-        }
-
-        switch (indicator_status) {
-            case LED_BLE_PAIR: { // 闪烁模式 5Hz 重置
-                if ((last_time == 0) || (timer_elapsed32(last_time) >= LED_BLE_PAIR_INTVL_MS)) {
-                    last_time = timer_read32();
-                    rgb_flip  = !rgb_flip;
-                    if (rgb_flip) {
-                        rgb.r = rgb_index_color_table[dev_info.devs][0];
-                        rgb.g = rgb_index_color_table[dev_info.devs][1];
-                        rgb.b = rgb_index_color_table[dev_info.devs][2];
-                    } else {
-                        rgb = (RGB){.r = 0, .g = 0, .b = 0};
-                    }
-                }
-
-                if (bts_info.bt_info.paired) {
-                    last_long_time   = timer_read32();
-                    indicator_status = 3;
-                    break;
-                }
-
-                /* 超时60s退出 */
-                if (timer_elapsed32(last_total_time) >= BLE_PAIR_TIMEOUT) {
-                    indicator_status = 0;
-                    kb_sleep_flag    = true;
-                }
-            } break;
-            case LED_BLE_CONN: { // 闪烁模式 2Hz 回连
-                if ((last_time == 0) || (timer_elapsed32(last_time) >= LED_BLE_CONN_INTVL_MS)) {
-                    last_time = timer_read32();
-                    rgb_flip  = !rgb_flip;
-                    if (rgb_flip) {
-                        rgb.r = rgb_index_color_table[dev_info.devs][0];
-                        rgb.g = rgb_index_color_table[dev_info.devs][1];
-                        rgb.b = rgb_index_color_table[dev_info.devs][2];
-                    } else {
-                        rgb = (RGB){.r = 0, .g = 0, .b = 0};
-                    }
-                }
-                // if (dev_info.devs == DEVS_2_4G) bts_process_keys(KC_LGUI, 0, DEVS_2_4G, 1);
-                if (bts_info.bt_info.paired) {
-                    last_long_time   = timer_read32();
-                    indicator_status = 3;
-                    break;
-                }
-
-                if(dev_info.devs==DEVS_2_4G){
-                    if (timer_elapsed32(last_total_time) >= BLE_CONN_TIMEOUT) {
-                    indicator_status = 0;
-                    kb_sleep_flag    = true;
-                    }
-                } else {
-                    if (timer_elapsed32(last_total_time) >= BLE_CONN_TIMEOUT) {
-                        indicator_status = 0;
-                        kb_sleep_flag    = true;
-                    }
-                }
-            } break;
-            case LED_BLE_CONNED: { // 长亮模式
-                if ((timer_elapsed32(last_long_time) < (3 * 1000))) {
-                    rgb.r = rgb_index_color_table[dev_info.devs][0];
-                    rgb.g = rgb_index_color_table[dev_info.devs][1];
-                    rgb.b = rgb_index_color_table[dev_info.devs][2];
-                } else {
-                    indicator_status = 0;
-                    Low_power_blink_time = timer_read32();
-                }
-            } break;
-            case LED_BLE_OFF: { // 长灭模式
-                rgb = (RGB){.r = 0, .g = 0, .b = 0};
-            } break;
+        rgb_matrix_set_color_all(0, 0, 0);
+        switch (factory_reset_status) {
+            case 1: // factory reset
+                rgb_matrix_set_color(7, 100, 0, 0);
+                break;
+            case 2: // keyboard reset
+                rgb_matrix_set_color(6, 100, 0, 0);
+                break;
+            case 3: // ble reset
+                rgb_matrix_set_color(5, 100, 0, 0);
+                break;
             default:
-                rgb_flip = false;
-                if (!kb_sleep_flag) {
-                    if (!bts_info.bt_info.paired) {
-                        indicator_status = LED_BLE_CONN;
-                        if (dev_info.devs == DEVS_2_4G)
-                            bt_switch_mode(DEVS_USB, DEVS_2_4G, false);
-                        else
-                            bt_switch_mode(DEVS_USB, dev_info.last_devs, false);
-                    }
-                }
-                // return true;
                 break;
         }
-
-        rgb_matrix_set_color(rgb_index, rgb.r, rgb.g, rgb.b);
-    // }
-}
-
-void led_bat_gauge(void) {
-    if (query_vol_flag) {
-        // bts_send_vendor(v_query_vol);
-
-        rgb_matrix_set_color_all(RGB_OFF);
-
-        for (uint8_t i = LED_1; i < LED_1 + (bts_info.bt_info.pvol / 10); i++) {
-            if (bts_info.bt_info.pvol < 30) {
-                rgb_matrix_set_color(i, RGB_RED);
-            } else if (bts_info.bt_info.pvol < 60) {
-                rgb_matrix_set_color(i, RGB_ORANGE);
-            } else {
-                rgb_matrix_set_color(i, RGB_GREEN);
-            }
-        }
-    }
-}
-
-bool bt_cable_get(void) {
-    if(readPin(BT_CABLE_PIN) == BT_CABLE_TRUE) {
-        return true;
-    } else {
         return false;
     }
-}
-
-bool bt_charge_get(void) {
-    if(readPin(BT_CHARGE_PIN) == true) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-void led_bat_low_warn_blink(void) {
-    if ((bts_info.bt_info.low_vol) && !bt_cable_get()) {
-
-        rgb_matrix_set_color_all(RGB_OFF);
-
-        static bool     Low_power_bink;
-        static uint16_t Low_power_time;
-
-        if (timer_elapsed(Low_power_time) >= 300) {
-            Low_power_bink = !Low_power_bink;
-            Low_power_time = timer_read32();
-        }
-
-        if (Low_power_bink) {
-            rgb_matrix_set_color(LED_BAT, RGB_RED);
-        } else {
-            rgb_matrix_set_color(LED_BAT, RGB_OFF);
-        }
-    }
-}
-
-void led_bat_low_warn_blink_5_second(void) {
-    static bool once = false;
-    if ((bts_info.bt_info.pvol < 20) && !bt_cable_get() && !once) {
-
-        rgb_matrix_set_color_all(RGB_OFF);
-        
-        led_single_blink_set(LED_BAT_CNT, LED_BAT, RGB_RED);
-
-        once = true;
-    }
-}
-
-void kybd_bat_low_warn(void) {
-    if ((bts_info.bt_info.low_vol) && !bt_cable_get()) {
-
-        rgb_matrix_set_color_all(RGB_OFF);
-        // rgb_matrix_disable_noeeprom();
-        
-        // led_bat_low_warn();
-    }
-}
-
-void kybd_bat_low_sleep(void) {
-    extern bool low_vol_offed_sleep;
-    if ((bts_info.bt_info.low_vol_offed) && !bt_cable_get()) {
-        low_vol_offed_sleep = true;
-        kb_sleep_flag       = true;
-    } else {
-        low_vol_offed_sleep = false;
-    }
-}
-
-void bt_bat_low_indicator(void) {
-    if (!kb_sleep_flag && (indicator_status == 0) && bts_info.bt_info.pvol < 20) {
-        if (Low_power_blink_time && timer_elapsed(Low_power_blink_time) < (5 * TIMEOUT_SECOND)) {
-            rgb_matrix_set_color(LED_BAT, RGB_RED);
-        } else {
-            Low_power_blink_time = 0;
-        }
-    }
-}
-
-void led_bat_charge(void) {
-    #if defined(BT_CABLE_PIN) && defined(BT_CHARGE_PIN)
-    // 充电接入
-    // if (!dev_info.Charge_flag) {
-        static uint32_t charging_time;
-        static uint32_t charg_full_time;
-
-        if (bt_cable_get()) {
-            if (!bt_charge_get()) {
-                // 正在充电
-                if (timer_elapsed32(charging_time) >= 2000) {
-                    // Low_power_bink = 1;
-                    // if (dev_info.devs != DEVS_USB) {
-                    //     if (timer_elapsed32(charging_time) <= 12000) {
-                    //         rgb_matrix_set_color(LED_BAT, RGB_ORANGE);
-                    //     }
-                    // }
-                }
-                charg_full_time  = timer_read32();
-            } else {
-                // 充满
-                // Low_power_bink = 0;
-                if ((timer_elapsed32(charg_full_time) <= 7 * TIMEOUT_SECOND) && (timer_elapsed32(charg_full_time) >= 2 * TIMEOUT_SECOND)) {
-                    // rgb_matrix_set_color(LED_BAT, RGB_GREEN);
-                    led_single_blink_set(2, LED_BAT, RGB_GREEN);
-                }
-                charging_time  = timer_read32();
-            }
-        } else {
-            static uint32_t query_vol_time;
-
-            if (dev_info.devs != DEVS_USB) {
-                if  (timer_elapsed32(query_vol_time) >= 10000){
-                    query_vol_time  = timer_read32();
-                    bts_send_vendor(v_query_vol);
-                }
-            }
-            
-            bt_bat_low_indicator();
-        }
-    // }
-    #endif
-}
-
-uint8_t         single_blink_cnt;
-uint8_t         single_blink_index;
-RGB      single_blink_color;
-uint32_t single_blink_time;
-
-void led_single_blink_set(uint8_t cnt, uint8_t led, uint8_t r, uint8_t g, uint8_t b) {
-    single_blink_time  = timer_read32();
-    single_blink_cnt   = cnt;
-    single_blink_index = led;
-    single_blink_color = (RGB){r, g, b};
-}
-
-void led_single_blink(void){
-    if (single_blink_cnt) { // 单键闪烁
-        if (timer_elapsed32(single_blink_time) > 300) {
-            single_blink_time = timer_read32();
-            single_blink_cnt--;
-        }
-        
-        if (single_blink_cnt % 2) {
-            rgb_matrix_set_color(single_blink_index, single_blink_color.r, single_blink_color.g, single_blink_color.b);
-        } else {
-            rgb_matrix_set_color(single_blink_index, RGB_OFF);
-        }
-    }
-}
-
-void led_all_blink(void){
+    /*************************************************************************************/
     if (all_blink_cnt) { // 全键闪烁
-        rgb_matrix_set_color_all(RGB_OFF);
-        if (timer_elapsed32(all_blink_time) > 300) {
+        rgb_matrix_set_color_all(0, 0, 0);
+        if (timer_elapsed32(all_blink_time) > 500) {
             all_blink_time = timer_read32();
             all_blink_cnt--;
         }
-        if (all_blink_cnt & 0x1) {
-            rgb_matrix_set_color_all(140,140,140);
+        if (all_blink_cnt % 2) {
+            rgb_matrix_set_color_all(all_blink_color.r, all_blink_color.g, all_blink_color.b);
+        } else {
+            rgb_matrix_set_color_all(0, 0, 0);
         }
     }
-}
+    if (single_blink_cnt) { // 单键闪烁
+        if (timer_elapsed32(single_blink_time) > 500) {
+            single_blink_time = timer_read32();
 
-void led_fn_curr_device(void){
-    // FN 按下时显示当前设备状态
-    if (get_highest_layer(layer_state) == 3) {
-        rgb_matrix_set_color(rgb_index_table[dev_info.devs], rgb_index_color_table[dev_info.devs][0], rgb_index_color_table[dev_info.devs][1], rgb_index_color_table[dev_info.devs][2]);
+            single_blink_cnt--;
+        }
+        if (single_blink_cnt % 2) {
+            rgb_matrix_set_color(single_blink_index, single_blink_color.r, single_blink_color.g, single_blink_color.b);
+        } else {
+            rgb_matrix_set_color(single_blink_index, 0, 0, 0);
+        }
+    }
+    /*************************************************************************************/
+    if (dev_info.devs != DEVS_USB) {
+        bt_led();
+    }
+    if (dev_info.devs == DEVS_USB) {
+        usb_led();
+    }
 
-        led_bat_fn();
-    } else {
-        if (!rgb_matrix_get_flags()) {
-            // rgb_matrix_set_color(rgb_index_table[dev_info.devs], RGB_OFF);
-
-            for (uint8_t i = 0; i < 5; i++){
-                rgb_matrix_set_color(rgb_index_table[i], RGB_OFF);
+#if defined(BT_CABLE_PIN) && defined(BT_CHARGE_PIN)
+    // 充电接入
+    if (!readPin(BT_CABLE_PIN)) {
+        // 正在充电
+        if (timer_elapsed32(detect_charge_pin_time) > 200) {
+            detect_charge_pin_time = timer_read32();
+            if (readPin(BT_CHARGE_PIN)) {
+                // 充满
+                // charge_full_blink_time = timer_read32();
+                single_blink_time = timer_read32();
+                single_blink_cnt  = 10;
+                single_blink_index = 22; // 充满指示灯
+                single_blink_color = (RGB){0, 100, 0}; // 绿色
             }
 
-            rgb_matrix_set_color(BT_VOL_LED, RGB_OFF);
+            // if (charge_full_blink_time && timer_elapsed(charge_full_blink_time) < (5 * 1000)) {
+            //     rgb_matrix_set_color(22, 0, 100, 0);
+            // } else {
+            //     charge_full_blink_time = 0;
+            // }
+        }
+    } else {
+        static uint32_t query_vol_time;
+        if (!kb_sleep_flag && bts_info.bt_info.paired && timer_elapsed32(query_vol_time) >= 10000) {
+            query_vol_time = timer_read32();
+            bts_send_vendor(v_query_vol);
+        }
+
+        if (dev_info.devs != DEVS_USB) {
+            bt_bat_low_indicator();
+
+            static uint8_t last_rgb_matrix_mode   = 0;     // 使用0xFF表示未初始化
+            static bool    is_in_low_voltage_mode = false; // 标记当前是否处于低电模式
+
+            if (bts_info.bt_info.pvol <= 5) {
+                // 低电量状态
+                if (!is_in_low_voltage_mode) {
+                    // 首次进入低电模式，保存当前模式
+                    last_rgb_matrix_mode   = rgb_matrix_get_mode();
+                    is_in_low_voltage_mode = true;
+                    rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_EFFECT_OFF);
+                    BT_DEBUG_INFO("Low voltage: saved current mode %d, switching to OFF\n", last_rgb_matrix_mode);
+                }
+                // 如果已经在低电模式，不做任何操作，保持OFF状态
+            }
+            if (bts_info.bt_info.pvol > 5) {
+                // 电压正常
+                if (is_in_low_voltage_mode) {
+                    // 从低电模式恢复，恢复之前保存的模式
+                    rgb_matrix_mode_noeeprom(last_rgb_matrix_mode);
+                    BT_DEBUG_INFO("Voltage recovered: restored to previous mode %d\n", last_rgb_matrix_mode);
+                }
+                is_in_low_voltage_mode = false;
+                last_rgb_matrix_mode   = 0; // 重置为未初始化状态
+            }
+
+            extern bool low_vol_offed_sleep;
+            if (bts_info.bt_info.low_vol_offed) {
+                kb_sleep_flag       = true;
+                low_vol_offed_sleep = true;
+            }
+
+#    define LED_1 3
+            if ((get_highest_layer(default_layer_state | layer_state) == 1) || query_vol_flag) {
+                if (bts_info.bt_info.pvol <= 20) {
+                    rgb_matrix_set_color(LED_1, RGB_RED);
+                } else if (bts_info.bt_info.pvol <= 94) {
+                    rgb_matrix_set_color(LED_1, RGB_YELLOW);
+                } else {
+                    rgb_matrix_set_color(LED_1, RGB_GREEN);
+                }
+            } else {
+                if (rgb_matrix_get_flags() == LED_FLAG_NONE) {
+                    rgb_matrix_set_color(LED_1, 0, 0, 0);
+                }
+            }
         }
     }
-}
-
-
-uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
-    // FN 按下时显示当前设备状态
-    // if (get_highest_layer(default_layer_state | layer_state) == 1) {
-    //     rgb_matrix_set_color(46, RGB_WHITE);
-    // } else if (get_highest_layer(default_layer_state | layer_state) == 3) {
-    //     rgb_matrix_set_color(47, RGB_WHITE);
-    // }
-
-    led_fn_curr_device();
-
-    kybd_ee_clr_3();
-
-    led_single_blink();
-    led_all_blink();
-
-    led_pair_blink();
-
-    if (dev_info.devs != DEVS_USB) {
-        // led_bat_low_warn_blink();
-        // led_bat_low_warn_blink_5_second();
-
-        led_bat_charge();
-
-        kybd_bat_low_sleep();
-
-        led_ble();
-    }
-
-    // led_status_set_sw();
-    led_status_set_watch();
-
+#endif
     return true;
 }
-#endif
