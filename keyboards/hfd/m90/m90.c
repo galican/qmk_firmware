@@ -112,10 +112,16 @@ const is31fl3733_led_t PROGMEM g_is31fl3733_leds[RGB_MATRIX_LED_COUNT] = {
 
 bool led_inited = false;
 
-#define HUE_SET_NUM (9 - 1)
-const uint8_t HUE_SET_TABLE[][3] = {
-    {HSV_MAGENTA}, {HSV_RED}, {HSV_ORANGE}, {HSV_YELLOW}, {HSV_GREEN}, {HSV_CYAN}, {HSV_BLUE}, {HSV_PURPLE}, {HSV_WHITE},
-};
+// ====================
+// 调试信息控制宏
+// ====================
+#ifdef CONSOLE_ENABLE
+#    define DEBUG_PRINTF(fmt, ...) uprintf(fmt, ##__VA_ARGS__)
+#else
+#    define DEBUG_PRINTF(fmt, ...) \
+        do {                       \
+        } while (0)
+#endif
 
 void led_config_all(void) {
     if (!led_inited) {
@@ -147,43 +153,154 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
     if (process_record_user(keycode, record) != true) {
         return false;
     }
+
     switch (keycode) {
         case RGB_TOG:
             if (record->event.pressed) {
                 if (bts_info.bt_info.low_vol) {
                     return false;
                 }
-                if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
-                    rgb_matrix_mode(RGB_MATRIX_DEFAULT_MODE);
-                } else {
-                    if (rgb_matrix_get_flags() == LED_FLAG_ALL) {
-                        rgb_matrix_set_flags(LED_FLAG_NONE);
-                        rgb_matrix_set_color_all(0, 0, 0);
-                    } else {
-                        rgb_matrix_set_flags(LED_FLAG_ALL);
+
+                DEBUG_PRINTF("RGB_TOG: current backlight_off=%d\n", per_info.backlight_off);
+
+                if (per_info.backlight_off) {
+                    // 开启背光
+                    per_info.backlight_off = false;
+
+                    uint8_t target_mode = per_info.saved_rgb_mode;
+                    if (target_mode > 21 || target_mode == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
+                        target_mode = rgb_matrix_config.mode;
+                        if (target_mode == RGB_MATRIX_CUSTOM_EFFECT_OFF || target_mode > 21) {
+                            target_mode = RGB_MATRIX_DEFAULT_MODE;
+                        }
                     }
+                    rgb_matrix_mode(target_mode);
+                    DEBUG_PRINTF("RGB_TOG: backlight ON, mode=%d\n", target_mode);
+
+                } else {
+                    // 关闭背光
+                    per_info.backlight_off = true;
+
+                    uint8_t current_mode = rgb_matrix_get_mode();
+                    if (current_mode <= 21 && current_mode != RGB_MATRIX_CUSTOM_EFFECT_OFF) {
+                        per_info.saved_rgb_mode = current_mode;
+                        DEBUG_PRINTF("RGB_TOG: saved current mode %d\n", current_mode);
+                    } else {
+                        per_info.saved_rgb_mode = RGB_MATRIX_DEFAULT_MODE;
+                        DEBUG_PRINTF("RGB_TOG: used default mode instead of %d\n", current_mode);
+                    }
+                    rgb_matrix_mode(RGB_MATRIX_CUSTOM_EFFECT_OFF);
+                    DEBUG_PRINTF("RGB_TOG: backlight OFF\n");
                 }
+
+                // validate_per_info_ranges();
+                eeconfig_update_kb(per_info.raw);
+                DEBUG_PRINTF("RGB_TOG: saved per_info.raw=0x%08lX\n", per_info.raw);
             }
             return false;
+
         case RGB_MOD:
             if (record->event.pressed) {
+                if (bts_info.bt_info.low_vol) {
+                    return false;
+                }
+
+                // 如果背光关闭，先开启
+                if (per_info.backlight_off) {
+                    per_info.backlight_off = false;
+                    eeconfig_update_kb(per_info.raw);
+                    DEBUG_PRINTF("RGB_MOD: auto-enabled backlight\n");
+                }
+
                 rgb_matrix_step();
+                // 跳过关闭模式
                 if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
                     rgb_matrix_step();
                 }
-            }
-            return false;
-        case RGB_RMOD:
-            if (record->event.pressed) {
-                rgb_matrix_step_reverse();
-                if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
-                    rgb_matrix_step_reverse();
+
+                // 保存新模式
+                uint8_t new_mode = rgb_matrix_get_mode();
+                if (new_mode <= 21) {
+                    per_info.saved_rgb_mode = new_mode;
+                    eeconfig_update_kb(per_info.raw);
+                    DEBUG_PRINTF("RGB_MOD: saved new mode %d\n", new_mode);
                 }
             }
             return false;
+
+        case RGB_RMOD:
+            if (record->event.pressed) {
+                if (bts_info.bt_info.low_vol) {
+                    return false;
+                }
+
+                // 如果背光关闭，先开启
+                if (per_info.backlight_off) {
+                    per_info.backlight_off = false;
+                    eeconfig_update_kb(per_info.raw);
+                    DEBUG_PRINTF("RGB_RMOD: auto-enabled backlight\n");
+                }
+
+                rgb_matrix_step_reverse();
+                // 跳过关闭模式
+                if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
+                    rgb_matrix_step_reverse();
+                }
+
+                // 保存新模式
+                uint8_t new_mode = rgb_matrix_get_mode();
+                if (new_mode <= 21) {
+                    per_info.saved_rgb_mode = new_mode;
+                    eeconfig_update_kb(per_info.raw);
+                    DEBUG_PRINTF("RGB_RMOD: saved new mode %d\n", new_mode);
+                }
+            }
+            return false;
+
+#ifdef CONSOLE_ENABLE
+        case KC_A: {
+            if (record->event.pressed) {
+                validate_per_info_ranges();
+                debug_per_info_current();
+            }
+            return false;
+        }
+
+        case KC_B: {
+            if (record->event.pressed) {
+                debug_per_info_layout();
+            }
+            return false;
+        }
+
+        // 新增：dev_info 调试按键
+        case KC_C: {
+            if (record->event.pressed) {
+                debug_dev_info_current();
+            }
+            return false;
+        }
+
+        case KC_D: {
+            if (record->event.pressed) {
+                debug_dev_info_layout();
+            }
+            return false;
+        }
+
+        // 新增：综合调试按键
+        case KC_F: {
+            if (record->event.pressed) {
+                debug_all_structures();
+            }
+            return false;
+        }
+#endif
+
         default:
             break;
     }
+
 #ifdef BT_MODE_ENABLE
     if (process_record_bt(keycode, record) != true) {
         return false;
@@ -207,30 +324,54 @@ void matrix_init_kb(void) {
 }
 
 void keyboard_post_init_kb(void) {
-    // This is called after the keyboard matrix is initialized
-    // and the RGB matrix is initialized.
-    // It can be used to set up additional features or configurations.
+    per_info.raw = eeconfig_read_kb();
 
-    // dev_info.config.raw = eeconfig_read_kb();
+    // 验证和修复可能的无效数据
+    // validate_per_info_ranges();
+
+    DEBUG_PRINTF("Boot: per_info.raw=0x%08lX, backlight_off=%d, saved_rgb_mode=%d\n", per_info.raw, per_info.backlight_off, per_info.saved_rgb_mode);
+
+    // 新增：开机时显示 dev_info 状态
+    DEBUG_PRINTF("Boot: dev_info.raw=0x%08lX, devs=%d, last_devs=%d\n", dev_info.raw, dev_info.devs, dev_info.last_devs);
+
+    if (per_info.backlight_off) {
+        // 用户关闭了背光，设置为关闭模式
+        rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_EFFECT_OFF);
+        DEBUG_PRINTF("Boot: applied backlight OFF\n");
+    } else {
+        // 用户开启了背光，恢复保存的模式
+        uint8_t target_mode = per_info.saved_rgb_mode;
+        if (target_mode > 21 || target_mode == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
+            target_mode = RGB_MATRIX_DEFAULT_MODE;
+        }
+        rgb_matrix_mode_noeeprom(target_mode);
+        DEBUG_PRINTF("Boot: applied backlight ON, mode=%d\n", target_mode);
+    }
 
     keyboard_post_init_user();
 }
 
 void eeconfig_init_kb(void) {
-    dev_info.config.sleep_mode = 1;
-    // eeconfig_update_user(dev_info.raw);
+    // 设置默认值
+    per_info.sleep_mode      = 1;                       // 默认睡眠模式
+    per_info.ind_brightness  = RGB_MATRIX_VAL_STEP * 3; // 默认亮度
+    per_info.smd_color_index = 0;                       // 默认颜色
+    per_info.ind_color_index = 0;                       // 默认颜色
+    per_info.backlight_off   = true;                    // 默认关闭背光
+    per_info.eco_tog_flag    = false;                   // 默认关闭省电
+    per_info.saved_rgb_mode  = RGB_MATRIX_DEFAULT_MODE; // 默认RGB模式
+    per_info.reserved        = 0;                       // 预留位清零
 
-    // dev_info.config.ind_brightness = RGB_MATRIX_DEFAULT_VAL;
-    dev_info.config.ind_brightness = RGB_MATRIX_VAL_STEP * 3;
-    // eeconfig_update_kb(dev_info.config.raw);
+    // RGB配置
+    rgb_matrix_config.hsv.h = 170;
+    rgb_matrix_config.mode  = RGB_MATRIX_CUSTOM_EFFECT_OFF;
 
-    // keymap_config.nkro = false;
-    // eeconfig_update_keymap(&keymap_config);
-    rgb_matrix_config.hsv.h         = 170;
-    dev_info.config.smd_color_index = 0;
-    eeconfig_update_user(dev_info.raw);
+    // validate_per_info_ranges(); // 验证范围
 
-    rgb_matrix_mode(RGB_MATRIX_CUSTOM_EFFECT_OFF);
+    eeconfig_update_kb(per_info.raw);
+    eeconfig_update_rgb_matrix(&rgb_matrix_config);
+
+    DEBUG_PRINTF("eeconfig_init_kb: initialized with backlight_off=true, saved_mode=%d\n", per_info.saved_rgb_mode);
 
     eeconfig_init_user();
 }
@@ -254,11 +395,6 @@ void housekeeping_task_kb(void) {
 }
 
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
-    // if (!rgb_info.rgb_tog_flag) {
-    // rgb_matrix_set_flags_noeeprom(LED_FLAG_NONE);
-    // rgb_matrix_set_color_all(0, 0, 0);
-    // }
-
     if (rgb_matrix_indicators_advanced_user(led_min, led_max) != true) {
         return false;
     }
@@ -273,6 +409,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     if (keymap_config.no_gui) {
         rgb_matrix_set_color(74, 160, 160, 160);
     }
+
     return true;
 }
 

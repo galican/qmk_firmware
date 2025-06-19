@@ -23,4 +23,5 @@ enum bt_keycodes {
     FN_MENU,
     SLEEP_TOGGLE,
     WIN_LOCK,
+    KC_SIRI,
 };

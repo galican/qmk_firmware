@@ -33,6 +33,18 @@ extern uint8_t sleep_time;
 #define BLE_RES BLE_RESET
 #define SW_SLEP SLEEP_TOGGLE
 
+// typedef struct PACKED {
+//     uint8_t len;
+//     uint8_t keycode[3];
+// } key_combination_t;
+
+// key_combination_t key_comb_list[4] = {
+//     {2, {KC_LWIN, KC_TAB}},
+//     {2, {KC_LWIN, KC_E}},
+//     {3, {KC_LSFT, KC_LCMD, KC_4}},
+//     {2, {KC_LWIN, KC_C},}
+// };
+
  enum __layers {
      WIN_B,
      WIN_FN,
@@ -51,7 +63,7 @@ extern uint8_t sleep_time;
         KC_LCTL, KC_LWIN, KC_LALT,                              KC_SPC,                             KC_RALT, KC_APP,MO(WIN_FN), KC_RCTL, KC_LEFT, KC_DOWN, KC_RGHT,           KC_P0,   KC_PDOT),
 
     [WIN_FN] = LAYOUT_104_ansi( /* FN */
-        NK_TOGG,          KC_BRID, KC_BRIU, _______, _______,   _______, _______, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,  KC_VOLU, _______, _______, _______,
+        NK_TOGG,          KC_BRID, KC_BRIU, KC_NO,   KC_NO,     KC_NO,   KC_NO,   KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,  KC_VOLU, _______, _______, _______,
         FN_FUN,  BT_HOST1,BT_HOST2,BT_HOST3,BT_2_4G, BT_USB,    _______, _______, _______, IND_VAL, IND_HUE, RGB_HUD, RGB_HUI,  FACTORY, _______, _______, _______,  _______, _______, _______, _______,
         BT_VOL,  _______, _______, _______, _______, _______,   _______, _______, _______, _______, _______, RGB_SAD, RGB_SAI,  RGB_MOD, BLE_RES, KEY_RES, _______,  _______, _______, _______, _______,
         _______, _______, _______, _______, _______, _______,   _______, _______, _______, _______, SW_SLEP, KEY_ECO,           RGB_TOG,                             _______, _______, _______,
@@ -59,8 +71,7 @@ extern uint8_t sleep_time;
         _______, WIN_LOCK,_______,                              _______,                            _______, KC_RWIN,MO(WIN_FN),_______, RGB_SPD, RGB_VAD, RGB_SPI,           _______, _______),
 
     [MAC_B] = LAYOUT_104_ansi( /* Base */
-        // KC_ESC,           KC_F1,   KC_F2,   KC_F3,   KC_F4,     KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,   KC_F12,  KC_PSCR, KC_SCRL, KC_PAUS,
-        NK_TOGG,          KC_BRID, KC_BRIU, KC_MCTL, G(KC_SPC), _______, _______, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,  KC_VOLU, _______, _______, _______,
+        NK_TOGG,          KC_BRID, KC_BRIU, KC_MCTL, G(KC_SPC), KC_SIRI, KC_NO, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,  KC_VOLU, _______, _______, _______,
         KC_GRV,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,      KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,   KC_BSPC, KC_INS,  KC_HOME, KC_PGUP,  KC_NUM,  KC_PSLS, KC_PAST, KC_PMNS,
         KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,      KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC,  KC_BSLS, KC_DEL,  KC_END,  KC_PGDN,  KC_P7,   KC_P8,   KC_P9,   KC_PPLS,
         KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,      KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,           KC_ENT,                              KC_P4,   KC_P5,   KC_P6,
@@ -68,9 +79,8 @@ extern uint8_t sleep_time;
         KC_LCTL, KC_LOPT, KC_LCMD,                              KC_SPC,                             KC_RCMD, KC_APP, MO(MAC_FN),KC_RCTL, KC_LEFT, KC_DOWN, KC_RGHT,           KC_P0,   KC_PDOT),
 
     [MAC_FN] = LAYOUT_104_ansi( /* mac fn */
-        // NK_TOGG,          KC_BRID, KC_BRIU, KC_MCTL, G(KC_SPC), _______, _______, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,  KC_VOLU, _______, _______, _______,
         KC_ESC,           KC_F1,   KC_F2,   KC_F3,   KC_F4,     KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,   KC_F12,  KC_PSCR, KC_SCRL, KC_PAUS,
-        FN_FUN,  _______, _______, _______, _______, _______,   _______, _______, _______, IND_VAL, IND_HUE, RGB_HUD, RGB_HUI,  FACTORY, _______, _______, _______,  _______, _______, _______, _______,
+        FN_FUN,  BT_HOST1,BT_HOST2,BT_HOST3,BT_2_4G, BT_USB,    _______, _______, _______, IND_VAL, IND_HUE, RGB_HUD, RGB_HUI,  FACTORY, _______, _______, _______,  _______, _______, _______, _______,
         BT_VOL,  _______, _______, _______, _______, _______,   _______, _______, _______, _______, _______, RGB_SAD, RGB_SAI,  RGB_MOD, BLE_RES, KEY_RES, _______,  _______, _______, _______, _______,
         _______, _______, _______, _______, _______, _______,   _______, _______, _______, _______, SW_SLEP, KEY_ECO,           RGB_TOG,                             _______, _______, _______,
         _______,          _______, _______, _______, _______,   _______, _______, _______, SW_OS,   _______, FN_MENU,           _______,          RGB_VAI,           _______, _______, _______, _______,
@@ -83,6 +93,9 @@ static uint8_t  VAL_OUT_LEDINDEX;
 static uint8_t  VAL_OUT_blink_cnt;
 static RGB      VAL_OUT_blink_color;
 static uint32_t VAL_OUT_blink_time;
+
+// bool     is_siri_active = false;
+// uint32_t siri_timer     = 0;
 
 #define KC_F1_ROW 0
 #define KC_F1_COL 2
@@ -214,66 +227,66 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         case IND_VAL: {
             if (record->event.pressed) {
-                dev_info.config.ind_brightness = qadd8(dev_info.config.ind_brightness, RGB_MATRIX_VAL_STEP);
-                dev_info.config.ind_brightness = (dev_info.config.ind_brightness > RGB_MATRIX_MAXIMUM_BRIGHTNESS) ? RGB_MATRIX_MAXIMUM_BRIGHTNESS : dev_info.config.ind_brightness;
-                eeconfig_update_user(dev_info.raw);
-                if (dev_info.config.ind_brightness == RGB_MATRIX_MAXIMUM_BRIGHTNESS) {
-                    dev_info.config.ind_brightness = 0x00;
+                per_info.ind_brightness = qadd8(per_info.ind_brightness, RGB_MATRIX_VAL_STEP);
+                per_info.ind_brightness = (per_info.ind_brightness > RGB_MATRIX_MAXIMUM_BRIGHTNESS) ? RGB_MATRIX_MAXIMUM_BRIGHTNESS : per_info.ind_brightness;
+                eeconfig_update_kb(per_info.raw);
+                if (per_info.ind_brightness == RGB_MATRIX_MAXIMUM_BRIGHTNESS) {
+                    per_info.ind_brightness = 0x00;
                 }
             }
         }
             return false;
         case IND_HUE: {
             if (record->event.pressed) {
-                dev_info.config.ind_color_index++;
-                if (dev_info.config.ind_color_index >= sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0])) {
-                    dev_info.config.ind_color_index = 0;
+                per_info.ind_color_index++;
+                if (per_info.ind_color_index >= sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0])) {
+                    per_info.ind_color_index = 0;
                 }
-                eeconfig_update_user(dev_info.raw);
+                eeconfig_update_kb(per_info.raw);
             }
         }
             return false;
         case RGB_HUI: {
             if (record->event.pressed) {
-                dev_info.config.smd_color_index++;
-                if (dev_info.config.smd_color_index >= sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0])) {
-                    dev_info.config.smd_color_index = sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0]) - 1;
+                per_info.smd_color_index++;
+                if (per_info.smd_color_index >= sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0])) {
+                    per_info.smd_color_index = sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0]) - 1;
                 }
-                eeconfig_update_user(dev_info.raw);
-                rgb_matrix_config.hsv.h = indicator_color_tab[dev_info.config.smd_color_index][0];
-                rgb_matrix_config.hsv.s = indicator_color_tab[dev_info.config.smd_color_index][1];
+                eeconfig_update_kb(per_info.raw);
+                rgb_matrix_config.hsv.h = indicator_color_tab[per_info.smd_color_index][0];
+                rgb_matrix_config.hsv.s = indicator_color_tab[per_info.smd_color_index][1];
                 rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
             }
         }
             return false;
         case RGB_HUD: {
             if (record->event.pressed) {
-                if (dev_info.config.smd_color_index == 0) {
-                    dev_info.config.smd_color_index = 0;
+                if (per_info.smd_color_index == 0) {
+                    per_info.smd_color_index = 0;
                 } else {
-                    dev_info.config.smd_color_index--;
+                    per_info.smd_color_index--;
                 }
-                eeconfig_update_user(dev_info.raw);
-                rgb_matrix_config.hsv.h = indicator_color_tab[dev_info.config.smd_color_index][0];
-                rgb_matrix_config.hsv.s = indicator_color_tab[dev_info.config.smd_color_index][1];
+                eeconfig_update_kb(per_info.raw);
+                rgb_matrix_config.hsv.h = indicator_color_tab[per_info.smd_color_index][0];
+                rgb_matrix_config.hsv.s = indicator_color_tab[per_info.smd_color_index][1];
                 rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
             }
         }
             return false;
         case KEY_ECO: {
             if (record->event.pressed) {
-                dev_info.config.eco_tog_flag = !dev_info.config.eco_tog_flag;
-                eeconfig_update_user(dev_info.raw);
+                per_info.eco_tog_flag = !per_info.eco_tog_flag;
+                eeconfig_update_kb(per_info.raw);
             }
         }
             return false;
         case SW_SLEP: {
             if (record->event.pressed) {
-                dev_info.config.sleep_mode += 1;
-                if (dev_info.config.sleep_mode > 3) {
-                    dev_info.config.sleep_mode = 0;
+                per_info.sleep_mode += 1;
+                if (per_info.sleep_mode > 3) {
+                    per_info.sleep_mode = 0;
                 }
-                switch (dev_info.config.sleep_mode) {
+                switch (per_info.sleep_mode) {
                     case 0: // 关闭睡眠
                         bts_send_vendor(v_dis_sleep_bt);
                         bts_send_vendor(v_dis_sleep_wl);
@@ -309,10 +322,30 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                     default:
                         break;
                 }
-                eeconfig_update_user(dev_info.raw);
+                eeconfig_update_kb(per_info.raw);
             }
         }
             return false;
+        case KC_SIRI: {
+            if (record->event.pressed) {
+                host_consumer_send(0x00CF);
+            } else {
+                host_consumer_send(0x0000);
+            }
+        }
+            return false; // Skip all further processing of this key
+        // case KC_SIRI:
+        //     if (record->event.pressed) {
+        //         if (!is_siri_active) {
+        //             is_siri_active = true;
+        //             register_code(KC_LCMD);
+        //             register_code(KC_SPACE);
+        //         }
+        //         siri_timer = sync_timer_read32();
+        //     } else {
+        //         // Do something else when release
+        //     }
+        //     return false; // Skip all further processing of this key
         default:
             break;
     }
@@ -335,28 +368,28 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
         }
     }
 
-    hsv.h = indicator_color_tab[dev_info.config.ind_color_index][0];
-    hsv.s = indicator_color_tab[dev_info.config.ind_color_index][1];
-    hsv.v = dev_info.config.ind_brightness;
+    hsv.h = indicator_color_tab[per_info.ind_color_index][0];
+    hsv.s = indicator_color_tab[per_info.ind_color_index][1];
+    hsv.v = per_info.ind_brightness;
     rgb   = hsv_to_rgb(hsv);
 
-    if (!dev_info.config.eco_tog_flag && host_keyboard_led_state().num_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
+    if (!per_info.eco_tog_flag && host_keyboard_led_state().num_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
         rgb_matrix_set_color(NUM_LOCK_IND_INDEX, rgb.r, rgb.g, rgb.b);
     } else {
         rgb_matrix_set_color(NUM_LOCK_IND_INDEX, 0, 0, 0);
     }
-    if (!dev_info.config.eco_tog_flag && host_keyboard_led_state().caps_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
+    if (!per_info.eco_tog_flag && host_keyboard_led_state().caps_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
         rgb_matrix_set_color(CAPS_LOCK_IND_INDEX, rgb.r, rgb.g, rgb.b);
     } else {
         rgb_matrix_set_color(CAPS_LOCK_IND_INDEX, 0, 0, 0);
     }
-    if (!dev_info.config.eco_tog_flag && host_keyboard_led_state().scroll_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
+    if (!per_info.eco_tog_flag && host_keyboard_led_state().scroll_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
         rgb_matrix_set_color(SCROLL_LOCK_IND_INDEX, rgb.r, rgb.g, rgb.b);
     } else {
         rgb_matrix_set_color(SCROLL_LOCK_IND_INDEX, 0, 0, 0);
     }
 
-    if (dev_info.config.eco_tog_flag) {
+    if (per_info.eco_tog_flag) {
         for (uint8_t i = NUM_LOCK_IND_INDEX; i < RGB_MATRIX_LED_COUNT; i++) {
             rgb_matrix_set_color(i, 0, 0, 0);
         }
@@ -366,7 +399,17 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 }
 
 void keyboard_post_init_user() {
-    rgb_matrix_config.hsv.h = indicator_color_tab[dev_info.config.smd_color_index][0];
-    rgb_matrix_config.hsv.s = indicator_color_tab[dev_info.config.smd_color_index][1];
+    rgb_matrix_config.hsv.h = indicator_color_tab[per_info.smd_color_index][0];
+    rgb_matrix_config.hsv.s = indicator_color_tab[per_info.smd_color_index][1];
     rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
 }
+
+// void housekeeping_task_keychron(void) {
+//     if (is_siri_active) {
+//         if (sync_timer_elapsed32(siri_timer) >= 500) {
+//             unregister_code(KC_LCMD);
+//             unregister_code(KC_SPACE);
+//             is_siri_active = false;
+//         }
+//     }
+// }

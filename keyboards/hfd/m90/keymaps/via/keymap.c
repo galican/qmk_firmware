@@ -51,16 +51,15 @@ extern uint8_t sleep_time;
         KC_LCTL, KC_LWIN, KC_LALT,                              KC_SPC,                             KC_RALT, KC_APP, MO(WIN_FN),KC_RCTL, KC_LEFT, KC_DOWN, KC_RGHT),
 
     [WIN_FN] = LAYOUT_87_ansi( /* FN */
-        NK_TOGG,          KC_BRID, KC_BRIU, _______, _______,   _______, _______, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,  KC_VOLU,
+        NK_TOGG,          KC_BRID, KC_BRIU, KC_NO,   KC_NO,     KC_NO,   KC_NO,   KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,  KC_VOLU,
         FN_FUN,  BT_HOST1,BT_HOST2,BT_HOST3,BT_2_4G, BT_USB,    _______, _______, _______, IND_VAL, IND_HUE, RGB_HUD, RGB_HUI,  FACTORY, _______, _______, _______,
         BT_VOL,  _______, _______, _______, _______, _______,   _______, _______, _______, _______, _______, RGB_SAD, RGB_SAI,  RGB_MOD, BLE_RES, KEY_RES, _______,
         _______, _______, _______, _______, _______, _______,   _______, _______, _______, _______, SW_SLEP, KEY_ECO,           RGB_TOG,
         _______,          _______, _______, _______, _______,   _______, _______, _______, _______, SW_OS,   FN_MENU,           _______,          RGB_VAI,
-        _______, WIN_LOCK,_______,                              _______,                            _______, KC_RWIN,MO(WIN_FN),_______, RGB_SPD, RGB_VAD, RGB_SPI),
+        _______, WIN_LOCK,_______,                              _______,                            _______, KC_RWIN, _______,  _______, RGB_SPD, RGB_VAD, RGB_SPI),
 
     [MAC_B] = LAYOUT_87_ansi( /* Base */
-        // KC_ESC,           KC_F1,   KC_F2,   KC_F3,   KC_F4,     KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,   KC_F12,
-        NK_TOGG,          KC_BRID, KC_BRIU, KC_MCTL, G(KC_SPC), _______, _______, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,  KC_VOLU,
+        NK_TOGG,          KC_BRID, KC_BRIU, KC_MCTL, G(KC_SPC), KC_SIRI, KC_NO,   KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,  KC_VOLU,
         KC_GRV,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,      KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,   KC_BSPC, KC_INS,  KC_HOME, KC_PGUP,
         KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,      KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC,  KC_BSLS, KC_DEL,  KC_END,  KC_PGDN,
         KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,      KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,           KC_ENT,
@@ -68,9 +67,8 @@ extern uint8_t sleep_time;
         KC_LCTL, KC_LOPT, KC_LCMD,                              KC_SPC,                             KC_RCMD, KC_APP, MO(MAC_FN),KC_RCTL, KC_LEFT, KC_DOWN, KC_RGHT),
 
     [MAC_FN] = LAYOUT_87_ansi( /* mac fn */
-        // NK_TOGG,          KC_BRID, KC_BRIU, KC_MCTL, G(KC_SPC), _______, _______, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,  KC_VOLU,
         KC_ESC,           KC_F1,   KC_F2,   KC_F3,   KC_F4,     KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,   KC_F12,
-        FN_FUN,  _______, _______, _______, _______, _______,   _______, _______, _______, IND_VAL, IND_HUE, RGB_HUD, RGB_HUI,  FACTORY, _______, _______, _______,
+        FN_FUN,  BT_HOST1,BT_HOST2,BT_HOST3,BT_2_4G, BT_USB,    _______, _______, _______, IND_VAL, IND_HUE, RGB_HUD, RGB_HUI,  FACTORY, _______, _______, _______,
         BT_VOL,  _______, _______, _______, _______, _______,   _______, _______, _______, _______, _______, RGB_SAD, RGB_SAI,  RGB_MOD, BLE_RES, KEY_RES, _______,
         _______, _______, _______, _______, _______, _______,   _______, _______, _______, _______, SW_SLEP, KEY_ECO,           RGB_TOG,
         _______,          _______, _______, _______, _______,   _______, _______, _______, SW_OS,   _______, FN_MENU,           _______,          RGB_VAI,
@@ -78,11 +76,11 @@ extern uint8_t sleep_time;
 
  };
 
-// clang-format on
-static uint8_t  VAL_OUT_LEDINDEX;
-static uint8_t  VAL_OUT_blink_cnt;
-static RGB      VAL_OUT_blink_color;
-static uint32_t VAL_OUT_blink_time;
+ // clang-format on
+ static uint8_t  VAL_OUT_LEDINDEX;
+ static uint8_t  VAL_OUT_blink_cnt;
+ static RGB      VAL_OUT_blink_color;
+ static uint32_t VAL_OUT_blink_time;
 
 #define KC_F1_ROW 0
 #define KC_F1_COL 2
@@ -212,127 +210,115 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
         }
             return false;
-        // case RGB_SPI: {
-        //     if (record->event.pressed && (rgb_matrix_get_speed() == 0xff)) {
-        //         if (timer_elapsed32(VAL_OUT_blink_time) > 200) {
-        //             VAL_OUT_blink_time = timer_read32();
-        //         }
-        //         VAL_OUT_blink_cnt   = 6;
-        //         VAL_OUT_LEDINDEX    = 59;
-        //         VAL_OUT_blink_color = (RGB){100, 100, 100};
-        //     }
-        // } break;
-        // case RGB_SPD: {
-        //     if (record->event.pressed && (rgb_matrix_get_speed() == 0x00)) {
-        //         if (timer_elapsed32(VAL_OUT_blink_time) > 200) {
-        //             VAL_OUT_blink_time = timer_read32();
-        //         }
-        //         VAL_OUT_blink_cnt   = 6;
-        //         VAL_OUT_LEDINDEX    = 71;
-        //         VAL_OUT_blink_color = (RGB){100, 100, 100};
-        //     }
-        // } break;
         case IND_VAL: {
             if (record->event.pressed) {
-                dev_info.config.ind_brightness = qadd8(dev_info.config.ind_brightness, RGB_MATRIX_VAL_STEP);
-                dev_info.config.ind_brightness = (dev_info.config.ind_brightness > RGB_MATRIX_MAXIMUM_BRIGHTNESS) ? RGB_MATRIX_MAXIMUM_BRIGHTNESS : dev_info.config.ind_brightness;
-                eeconfig_update_user(dev_info.raw);
-                if (dev_info.config.ind_brightness == RGB_MATRIX_MAXIMUM_BRIGHTNESS) {
-                    dev_info.config.ind_brightness = 0x00;
+                per_info.ind_brightness = qadd8(per_info.ind_brightness, RGB_MATRIX_VAL_STEP);
+                per_info.ind_brightness = (per_info.ind_brightness > RGB_MATRIX_MAXIMUM_BRIGHTNESS) ? RGB_MATRIX_MAXIMUM_BRIGHTNESS : per_info.ind_brightness;
+                eeconfig_update_kb(per_info.raw);
+                if (per_info.ind_brightness == RGB_MATRIX_MAXIMUM_BRIGHTNESS) {
+                    per_info.ind_brightness = 0x00;
                 }
             }
         }
             return false;
         case IND_HUE: {
             if (record->event.pressed) {
-                dev_info.config.ind_color_index++;
-                if (dev_info.config.ind_color_index >= sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0])) {
-                    dev_info.config.ind_color_index = 0;
+                per_info.ind_color_index++;
+                if (per_info.ind_color_index >= sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0])) {
+                    per_info.ind_color_index = 0;
                 }
-                eeconfig_update_user(dev_info.raw);
+                eeconfig_update_kb(per_info.raw);
             }
         }
             return false;
         case RGB_HUI: {
             if (record->event.pressed) {
-                dev_info.config.smd_color_index++;
-                if (dev_info.config.smd_color_index >= sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0])) {
-                    dev_info.config.smd_color_index = sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0]) - 1;
+                per_info.smd_color_index++;
+                if (per_info.smd_color_index >= sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0])) {
+                    per_info.smd_color_index = sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0]) - 1;
                 }
-                eeconfig_update_user(dev_info.raw);
-                rgb_matrix_config.hsv.h = indicator_color_tab[dev_info.config.smd_color_index][0];
-                rgb_matrix_config.hsv.s = indicator_color_tab[dev_info.config.smd_color_index][1];
+                eeconfig_update_kb(per_info.raw);
+                rgb_matrix_config.hsv.h = indicator_color_tab[per_info.smd_color_index][0];
+                rgb_matrix_config.hsv.s = indicator_color_tab[per_info.smd_color_index][1];
                 rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
             }
         }
             return false;
         case RGB_HUD: {
             if (record->event.pressed) {
-                if (dev_info.config.smd_color_index == 0) {
-                    dev_info.config.smd_color_index = 0;
+                if (per_info.smd_color_index == 0) {
+                    per_info.smd_color_index = 0;
                 } else {
-                    dev_info.config.smd_color_index--;
+                    per_info.smd_color_index--;
                 }
-                eeconfig_update_user(dev_info.raw);
-                rgb_matrix_config.hsv.h = indicator_color_tab[dev_info.config.smd_color_index][0];
-                rgb_matrix_config.hsv.s = indicator_color_tab[dev_info.config.smd_color_index][1];
+                eeconfig_update_kb(per_info.raw);
+                rgb_matrix_config.hsv.h = indicator_color_tab[per_info.smd_color_index][0];
+                rgb_matrix_config.hsv.s = indicator_color_tab[per_info.smd_color_index][1];
                 rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
             }
         }
             return false;
         case KEY_ECO: {
             if (record->event.pressed) {
-                dev_info.config.eco_tog_flag = !dev_info.config.eco_tog_flag;
-                eeconfig_update_user(dev_info.raw);
+                per_info.eco_tog_flag = !per_info.eco_tog_flag;
+                eeconfig_update_kb(per_info.raw);
             }
         }
             return false;
         case SW_SLEP: {
             if (record->event.pressed) {
-                dev_info.config.sleep_mode += 1;
-                if (dev_info.config.sleep_mode > 3) {
-                    dev_info.config.sleep_mode = 0;
+                per_info.sleep_mode += 1;
+                if (per_info.sleep_mode > 3) {
+                    per_info.sleep_mode = 0;
                 }
-                switch (dev_info.config.sleep_mode) {
+                switch (per_info.sleep_mode) {
                     case 0: // 关闭睡眠
                         bts_send_vendor(v_dis_sleep_bt);
                         bts_send_vendor(v_dis_sleep_wl);
                         VAL_OUT_blink_cnt   = 8;
-                        VAL_OUT_LEDINDEX    = 57;
+                        VAL_OUT_LEDINDEX    = 68;
                         VAL_OUT_blink_color = (RGB){0, 0, 100};
                         VAL_OUT_blink_time  = timer_read32();
                         break;
                     case 1: // 开启睡眠1
-                        bts_send_vendor(v_en_sleep_bt);
-                        bts_send_vendor(v_en_sleep_bt);
+                        bts_send_vendor(v_dis_sleep_bt);
+                        bts_send_vendor(v_dis_sleep_wl);
                         VAL_OUT_blink_cnt   = 2;
-                        VAL_OUT_LEDINDEX    = 57;
+                        VAL_OUT_LEDINDEX    = 68;
                         VAL_OUT_blink_color = (RGB){0, 0, 100};
                         VAL_OUT_blink_time  = timer_read32();
                         break;
                     case 2: // 开启睡眠2
-                        bts_send_vendor(v_en_sleep_bt);
-                        bts_send_vendor(v_en_sleep_bt);
+                        bts_send_vendor(v_dis_sleep_bt);
+                        bts_send_vendor(v_dis_sleep_wl);
                         VAL_OUT_blink_cnt   = 4;
-                        VAL_OUT_LEDINDEX    = 57;
+                        VAL_OUT_LEDINDEX    = 68;
                         VAL_OUT_blink_color = (RGB){0, 0, 100};
                         VAL_OUT_blink_time  = timer_read32();
                         break;
                     case 3: // 开启睡眠3
-                        bts_send_vendor(v_en_sleep_bt);
-                        bts_send_vendor(v_en_sleep_bt);
+                        bts_send_vendor(v_dis_sleep_bt);
+                        bts_send_vendor(v_dis_sleep_wl);
                         VAL_OUT_blink_cnt   = 6;
-                        VAL_OUT_LEDINDEX    = 57;
+                        VAL_OUT_LEDINDEX    = 68;
                         VAL_OUT_blink_color = (RGB){0, 0, 100};
                         VAL_OUT_blink_time  = timer_read32();
                         break;
                     default:
                         break;
                 }
-                eeconfig_update_user(dev_info.raw);
+                eeconfig_update_kb(per_info.raw);
             }
         }
             return false;
+        case KC_SIRI: {
+            if (record->event.pressed) {
+                host_consumer_send(0x00CF);
+            } else {
+                host_consumer_send(0x0000);
+            }
+        }
+            return false; // Skip all further processing of this key
         default:
             break;
     }
@@ -356,9 +342,9 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     }
 
     // 修正：使用 dev_info.config 中的系统指示灯配置
-    hsv.h = indicator_color_tab[dev_info.config.ind_color_index][0]; // 使用 dev_info
-    hsv.s = indicator_color_tab[dev_info.config.ind_color_index][1];
-    hsv.v = dev_info.config.ind_brightness; // 使用 dev_info
+    hsv.h = indicator_color_tab[per_info.ind_color_index][0];
+    hsv.s = indicator_color_tab[per_info.ind_color_index][1];
+    hsv.v = per_info.ind_brightness;
     rgb   = hsv_to_rgb(hsv);
 
     // 系统指示灯逻辑
@@ -381,7 +367,7 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     }
 
     // ECO 模式处理
-    if (dev_info.config.eco_tog_flag) {
+    if (per_info.eco_tog_flag) {
         for (uint8_t i = 84; i < RGB_MATRIX_LED_COUNT; i++) {
             rgb_matrix_set_color(i, 0, 0, 0);
         }
@@ -395,7 +381,7 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 }
 
 void keyboard_post_init_user() {
-    rgb_matrix_config.hsv.h = indicator_color_tab[dev_info.config.smd_color_index][0];
-    rgb_matrix_config.hsv.s = indicator_color_tab[dev_info.config.smd_color_index][1];
+    rgb_matrix_config.hsv.h = indicator_color_tab[per_info.smd_color_index][0];
+    rgb_matrix_config.hsv.s = indicator_color_tab[per_info.smd_color_index][1];
     rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
 }
