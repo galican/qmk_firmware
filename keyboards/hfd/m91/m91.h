@@ -23,5 +23,8 @@ enum bt_keycodes {
     FN_MENU,
     SLEEP_TOGGLE,
     WIN_LOCK,
-    KC_SIRI,
+    RGB_TEST,
+    MAC_Spotlight,
+    MAC_Dictation,
+    MAC_Do_Not_Disturb,
 };

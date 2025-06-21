@@ -78,7 +78,8 @@
         {"name":"FN_FUN","title":"Swap the function keys","shortName":"FN_FUN"},
         {"name":"FN_MENU","title":"Swap the menu and alt","shortName":"FN_MENU"},
         {"name":"SLEEP_TOGGLE","title":"Toggle sleep mode","shortName":"SW_SLEEP"},
-        {"name":"WIN_LOCK","title":"WIN key lock","shortName":"WIN_LCOK"}
+        {"name":"WIN_LOCK","title":"WIN key lock","shortName":"WIN_LCOK"},
+        {"name":"SIRI","title":"SIRI","shortName":"SIRI"}
     ],
     "layouts": {
     "keymap":[

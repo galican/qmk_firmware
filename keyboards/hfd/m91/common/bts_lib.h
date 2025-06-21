@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define BTS_LIB_VERSION 1.0.1
+#define BTS_LIB_VERSION 1.1.1
 
 typedef enum {
   DEVS_USB = 0,
@@ -89,5 +89,9 @@ bool bts_send_vendor(vbs_t cmd);
 bool bts_send_mouse_report(uint8_t *report);
 void bts_test_report_rate_task(void);
 char* bts_get_version(void);
+uint8_t bts_is_busy(void);
 
 void lp_system_sleep(void);
+
+void bts_set_nkro(bool state);
+bool bts_get_nkro(void);

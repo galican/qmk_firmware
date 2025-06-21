@@ -38,7 +38,7 @@ typedef union {
 } dev_info_t;
 
 // 在 bt_task.h 中
-typedef union PACKED{
+typedef union PACKED {
     uint32_t raw;
     struct {
         uint8_t sleep_mode : 2;      // 0-3 (4种)
@@ -83,7 +83,7 @@ bool process_record_bt(uint16_t keycode, keyrecord_t *record);
  * @param None
  * @return None
  */
-uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max);
+bool bt_indicator_rgb(uint8_t led_min, uint8_t led_max);
 
 /**
  * @brief 切换工作模式
@@ -91,12 +91,3 @@ uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max);
  * @return None
  */
 void bt_switch_mode(uint8_t last_mode, uint8_t now_mode, uint8_t reset);
-
-// 在其他结构体定义后面添加
-typedef struct {
-    bool     triggered;    // 是否已触发低电量警告
-    uint8_t  blink_count;  // 当前闪烁次数  
-    uint32_t blink_time;   // 闪烁计时器
-    bool     blink_state;  // 当前闪烁状态（亮/灭）
-    bool     completed;    // 闪烁是否完成
-} low_power_warning_t;

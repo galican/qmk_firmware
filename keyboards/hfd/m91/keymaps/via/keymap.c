@@ -33,24 +33,16 @@ extern uint8_t sleep_time;
 #define BLE_RES BLE_RESET
 #define SW_SLEP SLEEP_TOGGLE
 
-// typedef struct PACKED {
-//     uint8_t len;
-//     uint8_t keycode[3];
-// } key_combination_t;
+#define KC_SPOT MAC_Spotlight
+#define KC_DICT MAC_Dictation
+#define KC_DND MAC_Do_Not_Disturb
 
-// key_combination_t key_comb_list[4] = {
-//     {2, {KC_LWIN, KC_TAB}},
-//     {2, {KC_LWIN, KC_E}},
-//     {3, {KC_LSFT, KC_LCMD, KC_4}},
-//     {2, {KC_LWIN, KC_C},}
-// };
-
- enum __layers {
-     WIN_B,
-     WIN_FN,
-     MAC_B,
-     MAC_FN
- };
+enum __layers {
+    WIN_B,
+    WIN_FN,
+    MAC_B,
+    MAC_FN
+};
 
  const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
@@ -66,12 +58,12 @@ extern uint8_t sleep_time;
         NK_TOGG,          KC_BRID, KC_BRIU, KC_NO,   KC_NO,     KC_NO,   KC_NO,   KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,  KC_VOLU, _______, _______, _______,
         FN_FUN,  BT_HOST1,BT_HOST2,BT_HOST3,BT_2_4G, BT_USB,    _______, _______, _______, IND_VAL, IND_HUE, RGB_HUD, RGB_HUI,  FACTORY, _______, _______, _______,  _______, _______, _______, _______,
         BT_VOL,  _______, _______, _______, _______, _______,   _______, _______, _______, _______, _______, RGB_SAD, RGB_SAI,  RGB_MOD, BLE_RES, KEY_RES, _______,  _______, _______, _______, _______,
-        _______, _______, _______, _______, _______, _______,   _______, _______, _______, _______, SW_SLEP, KEY_ECO,           RGB_TOG,                             _______, _______, _______,
+        RGB_TEST,_______, _______, _______, _______, _______,   _______, _______, _______, _______, SW_SLEP, KEY_ECO,           RGB_TOG,                             _______, _______, _______,
         _______,          _______, _______, _______, _______,   _______, _______, _______, _______, SW_OS,   FN_MENU,           _______,          RGB_VAI,           _______, _______, _______, _______,
         _______, WIN_LOCK,_______,                              _______,                            _______, KC_RWIN,MO(WIN_FN),_______, RGB_SPD, RGB_VAD, RGB_SPI,           _______, _______),
 
     [MAC_B] = LAYOUT_104_ansi( /* Base */
-        NK_TOGG,          KC_BRID, KC_BRIU, KC_MCTL, G(KC_SPC), KC_SIRI, KC_NO, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,  KC_VOLU, _______, _______, _______,
+        KC_ESC,           KC_BRID, KC_BRIU, KC_MCTL, KC_NO,     KC_NO,   KC_NO,   KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,  KC_VOLU, _______, _______, _______,
         KC_GRV,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,      KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,   KC_BSPC, KC_INS,  KC_HOME, KC_PGUP,  KC_NUM,  KC_PSLS, KC_PAST, KC_PMNS,
         KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,      KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC,  KC_BSLS, KC_DEL,  KC_END,  KC_PGDN,  KC_P7,   KC_P8,   KC_P9,   KC_PPLS,
         KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,      KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,           KC_ENT,                              KC_P4,   KC_P5,   KC_P6,
@@ -79,10 +71,10 @@ extern uint8_t sleep_time;
         KC_LCTL, KC_LOPT, KC_LCMD,                              KC_SPC,                             KC_RCMD, KC_APP, MO(MAC_FN),KC_RCTL, KC_LEFT, KC_DOWN, KC_RGHT,           KC_P0,   KC_PDOT),
 
     [MAC_FN] = LAYOUT_104_ansi( /* mac fn */
-        KC_ESC,           KC_F1,   KC_F2,   KC_F3,   KC_F4,     KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,   KC_F12,  KC_PSCR, KC_SCRL, KC_PAUS,
+        NK_TOGG,           KC_F1,   KC_F2,   KC_F3,   KC_F4,     KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,   KC_F12, KC_PSCR, KC_SCRL, KC_PAUS,
         FN_FUN,  BT_HOST1,BT_HOST2,BT_HOST3,BT_2_4G, BT_USB,    _______, _______, _______, IND_VAL, IND_HUE, RGB_HUD, RGB_HUI,  FACTORY, _______, _______, _______,  _______, _______, _______, _______,
         BT_VOL,  _______, _______, _______, _______, _______,   _______, _______, _______, _______, _______, RGB_SAD, RGB_SAI,  RGB_MOD, BLE_RES, KEY_RES, _______,  _______, _______, _______, _______,
-        _______, _______, _______, _______, _______, _______,   _______, _______, _______, _______, SW_SLEP, KEY_ECO,           RGB_TOG,                             _______, _______, _______,
+        RGB_TEST,_______, _______, _______, _______, _______,   _______, _______, _______, _______, SW_SLEP, KEY_ECO,           RGB_TOG,                             _______, _______, _______,
         _______,          _______, _______, _______, _______,   _______, _______, _______, SW_OS,   _______, FN_MENU,           _______,          RGB_VAI,           _______, _______, _______, _______,
         _______, _______, _______,                              _______,                            _______, KC_ROPT, _______,  _______, RGB_SPD, RGB_VAD, RGB_SPI,           _______, _______),
 
@@ -104,9 +96,9 @@ static uint32_t VAL_OUT_blink_time;
 
 uint16_t FN_FUN_table[][12] = {
     {KC_F1, KC_F2, KC_F3, KC_F4, KC_F5, KC_F6, KC_F7, KC_F8, KC_F9, KC_F10, KC_F11, KC_F12},
-    {KC_BRID, KC_BRIU, KC_F3, KC_F4, KC_F5, KC_F6, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD, KC_VOLU},
+    {KC_BRID, KC_BRIU, KC_NO, KC_NO, KC_NO, KC_NO, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD, KC_VOLU},
     {KC_F1, KC_F2, KC_F3, KC_F4, KC_F5, KC_F6, KC_F7, KC_F8, KC_F9, KC_F10, KC_F11, KC_F12},
-    {KC_BRID, KC_BRIU, KC_MCTL, G(KC_SPC), KC_F5, KC_F6, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD, KC_VOLU},
+    {KC_BRID, KC_BRIU, KC_MCTL, KC_NO, KC_NO, KC_NO, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD, KC_VOLU},
 };
 
 uint16_t FN_MENU_table[][1] = {
@@ -326,7 +318,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
         }
             return false;
-        case KC_SIRI: {
+
+        case KC_DICT: {
             if (record->event.pressed) {
                 host_consumer_send(0x00CF);
             } else {
@@ -334,18 +327,23 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
         }
             return false; // Skip all further processing of this key
-        // case KC_SIRI:
-        //     if (record->event.pressed) {
-        //         if (!is_siri_active) {
-        //             is_siri_active = true;
-        //             register_code(KC_LCMD);
-        //             register_code(KC_SPACE);
-        //         }
-        //         siri_timer = sync_timer_read32();
-        //     } else {
-        //         // Do something else when release
-        //     }
-        //     return false; // Skip all further processing of this key
+        case MAC_Spotlight: {
+            if (record->event.pressed) {
+                host_consumer_send(0x0221);
+            } else {
+                host_consumer_send(0x0000);
+            }
+        }
+            return false; // Skip all further processing of this key
+        case MAC_Do_Not_Disturb: {
+            if (record->event.pressed) {
+                host_system_send(0x009B);
+            } else {
+                host_system_send(0x0000);
+            }
+        }
+            return false; // Skip all further processing of this key
+
         default:
             break;
     }
