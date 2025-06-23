@@ -29,8 +29,8 @@
     "rgb_matrix": {
         "driver": "is31fl3733",
         "led_count": 23,
-        "max_brightness": 100,
-        "val_steps": 20,
+        "max_brightness": 200,
+        "val_steps": 50,
         "speed_steps": 64,
         "sat_steps": 64,
         "sleep": true,

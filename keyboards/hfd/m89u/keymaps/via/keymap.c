@@ -16,11 +16,12 @@
 
 #include QMK_KEYBOARD_H
 #include "common/bt_task.h"
+#include <lib/lib8tion/lib8tion.h>
 
 enum __layers {
     PAD_B,
-    // PAD_NUM,
-    // PAD_DIR,
+    PAD_RESERVED1,
+    PAD_RESERVED2,
     PAD_FN,
 };
 
@@ -50,36 +51,36 @@ static uint8_t indicator_color_tab[][3] = {
     {HSV_CYAN},    // CYAN
 };
 
-bool eco_switch_flag = true; // 绿色节能模式开关
-
 // clang-format off
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
-    [PAD_B] = LAYOUT_numpad_6x4( /* Base */
-        KC_ESC,  KC_TAB,  KC_BSPC, MO(1),
+    [PAD_B] = LAYOUT_numpad_6x4(
+        KC_ESC,  KC_TAB,  KC_BSPC, MO(3),
         KC_NUM,  KC_EQL,  KC_PSLS, KC_PAST,
         KC_P7,   KC_P8,   KC_P9,   KC_PMNS,
         KC_P4,   KC_P5,   KC_P6,   KC_PPLS,
         KC_P1,   KC_P2,   KC_P3,   KC_PENT,
                  KC_P0,   KC_PDOT
     ),
-    // [PAD_NUM] = LAYOUT_ansi(
-    //     KC_ESC,  KC_TAB,  KC_BSPC, MO(3),
-    //     _______, KC_EQL,  KC_PSLS, KC_PAST,
-    //     KC_7,    KC_8,    KC_9,    KC_PMNS,
-    //     KC_4,    KC_5,    KC_6,    KC_PPLS,
-    //     KC_1,    KC_2,    KC_3,    KC_PENT,
-    //              KC_0,    KC_PDOT
-    // ),
-    // [PAD_DIR] = LAYOUT_ansi(
-    //     KC_ESC,  KC_TAB,  KC_BSPC, MO(3),
-    //     _______, KC_EQL,  KC_PSLS, KC_PAST,
-    //     KC_HOME, KC_UP,   KC_PGUP, KC_PMNS,
-    //     KC_LEFT, _______, KC_RGHT, KC_PPLS,
-    //     KC_END,  KC_DOWN, KC_PGDN, KC_PENT,
-    //              KC_INS,  KC_DEL
-    // ),
+
+    [1] = LAYOUT_numpad_6x4(
+        KC_ESC,  KC_TAB,  KC_BSPC, MO(3),
+        TO(2),   KC_EQL,  KC_PSLS, KC_PAST,
+        KC_P7,   KC_P8,   KC_P9,   KC_PMNS,
+        KC_P4,   KC_P5,   KC_P6,   KC_PPLS,
+        KC_P1,   KC_P2,   KC_P3,   KC_PENT,
+                 KC_P0,   KC_PDOT
+    ),
+
+    [2] = LAYOUT_numpad_6x4(
+        KC_ESC,  KC_TAB,  KC_BSPC, MO(3),
+        TO(1),   KC_EQL,  KC_PSLS, KC_PAST,
+        KC_HOME, KC_UP,   KC_PGUP, KC_PMNS,
+        KC_LEFT, _______, KC_RGHT, KC_PPLS,
+        KC_END,  KC_DOWN, KC_PGDN, KC_PENT,
+                 KC_INS,  KC_DEL
+    ),
 
     [PAD_FN] = LAYOUT_numpad_6x4(
         NK_TOGG, SW_SLEP, KEY_ECO, _______,
@@ -87,31 +88,32 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         RGB_HUI, RGB_VAI, RGB_MOD, RGB_SAI,
         BT_2_4G, BT_USB,  RGB_SPI, _______,
         BT_HOST1,BT_HOST2,BT_HOST3,_______,
-                 _______, _______
+                 SW_OS,   RGB_TEST
     )
-
-    // [3] = LAYOUT_ansi(
-    //     BT_HOST, BT_2_4G, BT_USB,  XXXXXXX,
-    //     RGB_MOD, EE_CLR3, EE_CLR2, EE_CLR1,
-    //     RGB_HUI, RGB_VAD, RGB_TOG, WL_SLEEP,
-    //     XXXXXXX, XXXXXXX, XXXXXXX, NL_OFF,
-    //     XXXXXXX, XXXXXXX, XXXXXXX, BT_PAIR,
-    //              XXXXXXX, EX_PAIR
-    // )
 };
+
+// clang-format on
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case RGB_VAI: {
             if (record->event.pressed) {
                 if (rgb_matrix_get_val() == RGB_MATRIX_MAXIMUM_BRIGHTNESS) {
-                    rgb_matrix_config.hsv.v = RGB_MATRIX_VAL_STEP;
+                    rgb_matrix_config.hsv.v = 50;
                 } else {
                     rgb_matrix_increase_val();
                 }
             }
-            return false;
         }
+            return false;
+        case RGB_VAD: {
+            if (record->event.pressed) {
+                // rgb_matrix_decrease_val();
+                rgb_matrix_config.hsv.v = rgb_matrix_get_val() - RGB_MATRIX_VAL_STEP;
+                if (rgb_matrix_get_val() <= 50) rgb_matrix_config.hsv.v = 50;
+            }
+        }
+            return false;
         case RGB_SPI: {
             if (record->event.pressed) {
                 if (rgb_matrix_get_speed() == UINT8_MAX) {
@@ -122,23 +124,61 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             return false;
         }
+        case IND_VAL: {
+            if (record->event.pressed) {
+                per_info.ind_brightness = qadd8(per_info.ind_brightness, RGB_MATRIX_VAL_STEP);
+                per_info.ind_brightness = (per_info.ind_brightness > RGB_MATRIX_MAXIMUM_BRIGHTNESS) ? RGB_MATRIX_MAXIMUM_BRIGHTNESS : per_info.ind_brightness;
+                eeconfig_update_kb(per_info.raw);
+                if (per_info.ind_brightness == RGB_MATRIX_MAXIMUM_BRIGHTNESS) {
+                    per_info.ind_brightness = 0x00;
+                }
+            }
+        }
+            return false;
+        case IND_HUE: {
+            if (record->event.pressed) {
+                per_info.ind_color_index++;
+                if (per_info.ind_color_index >= sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0])) {
+                    per_info.ind_color_index = 0;
+                }
+                eeconfig_update_kb(per_info.raw);
+            }
+        }
+            return false;
         case RGB_HUI: {
             if (record->event.pressed) {
-                dev_info.config.smd_color_index++;
-                if (dev_info.config.smd_color_index >= sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0])) {
-                    dev_info.config.smd_color_index = 0;
+                per_info.smd_color_index++;
+                if (per_info.smd_color_index >= sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0])) {
+                    per_info.smd_color_index = 0;
                 }
-                eeconfig_update_user(dev_info.raw);
-                rgb_matrix_config.hsv.h = indicator_color_tab[dev_info.config.smd_color_index][0];
-                rgb_matrix_config.hsv.s = indicator_color_tab[dev_info.config.smd_color_index][1];
+                eeconfig_update_kb(per_info.raw);
+                rgb_matrix_config.hsv.h = indicator_color_tab[per_info.smd_color_index][0];
+                rgb_matrix_config.hsv.s = indicator_color_tab[per_info.smd_color_index][1];
                 rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
             }
-            return false;
         }
+            return false;
+        case RGB_HUD: {
+            if (record->event.pressed) {
+                if (per_info.smd_color_index == 0) {
+                    per_info.smd_color_index = sizeof(indicator_color_tab) / sizeof(indicator_color_tab[0]) - 1;
+                } else {
+                    per_info.smd_color_index--;
+                }
+                eeconfig_update_kb(per_info.raw);
+                rgb_matrix_config.hsv.h = indicator_color_tab[per_info.smd_color_index][0];
+                rgb_matrix_config.hsv.s = indicator_color_tab[per_info.smd_color_index][1];
+                rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
+            }
+        }
+            return false;
         case RGB_SAI: {
             if (record->event.pressed) {
                 if (rgb_matrix_get_sat() >= UINT8_MAX) {
+                    rgb_matrix_config.hsv.s = 0; // 设置为最小饱和度
+                } else if (rgb_matrix_get_sat() == 0) {
                     rgb_matrix_config.hsv.s = RGB_MATRIX_SAT_STEP; // 设置为最小饱和度
+                    rgb_matrix_increase_sat();
                 } else {
                     rgb_matrix_increase_sat();
                 }
@@ -147,65 +187,67 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         }
         case KEY_ECO: {
             if (record->event.pressed) {
-                if (eco_switch_flag) {
-                    dev_info.config.eco_off_flag = !dev_info.config.eco_off_flag;
-                    eeconfig_update_user(dev_info.raw);
-                }
+                per_info.eco_tog_flag = !per_info.eco_tog_flag;
+                eeconfig_update_user(dev_info.raw);
             }
             return false;
         }
         case SW_SLEP: {
             if (record->event.pressed) {
-                dev_info.config.sleep_mode += 1;
-                if (dev_info.config.sleep_mode > 3) {
-                    dev_info.config.sleep_mode = 0;
+                per_info.sleep_mode += 1;
+                if (per_info.sleep_mode > 3) {
+                    per_info.sleep_mode = 0;
                 }
-                switch (dev_info.config.sleep_mode) {
+                switch (per_info.sleep_mode) {
                     case 0: // 关闭睡眠
                         bts_send_vendor(v_dis_sleep_bt);
                         bts_send_vendor(v_dis_sleep_wl);
                         VAL_OUT_blink_cnt   = 8;
                         VAL_OUT_LEDINDEX    = 1;
-                        VAL_OUT_blink_color = (RGB){0, 0, 100};
+                        VAL_OUT_blink_color = (RGB){0, 0, 200};
                         VAL_OUT_blink_time  = timer_read32();
                         break;
                     case 1: // 开启睡眠1
                         bts_send_vendor(v_en_sleep_bt);
-                        bts_send_vendor(v_en_sleep_bt);
+                        bts_send_vendor(v_en_sleep_wl);
                         VAL_OUT_blink_cnt   = 2;
                         VAL_OUT_LEDINDEX    = 1;
-                        VAL_OUT_blink_color = (RGB){0, 0, 100};
+                        VAL_OUT_blink_color = (RGB){0, 0, 200};
                         VAL_OUT_blink_time  = timer_read32();
                         break;
                     case 2: // 开启睡眠2
                         bts_send_vendor(v_en_sleep_bt);
-                        bts_send_vendor(v_en_sleep_bt);
+                        bts_send_vendor(v_en_sleep_wl);
                         VAL_OUT_blink_cnt   = 4;
                         VAL_OUT_LEDINDEX    = 1;
-                        VAL_OUT_blink_color = (RGB){0, 0, 100};
+                        VAL_OUT_blink_color = (RGB){0, 0, 200};
                         VAL_OUT_blink_time  = timer_read32();
                         break;
                     case 3: // 开启睡眠3
                         bts_send_vendor(v_en_sleep_bt);
-                        bts_send_vendor(v_en_sleep_bt);
+                        bts_send_vendor(v_en_sleep_wl);
                         VAL_OUT_blink_cnt   = 6;
                         VAL_OUT_LEDINDEX    = 1;
-                        VAL_OUT_blink_color = (RGB){0, 0, 100};
+                        VAL_OUT_blink_color = (RGB){0, 0, 200};
                         VAL_OUT_blink_time  = timer_read32();
                         break;
                     default:
                         break;
                 }
-                eeconfig_update_user(dev_info.raw);
+                eeconfig_update_kb(per_info.raw);
             }
-            return false;
         }
+            return false;
+
         default: {
             // 处理其他按键
             return true; // 允许默认处理
         }
     }
 }
+
+static HSV hsv;
+static RGB rgb;
 
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     if (VAL_OUT_blink_cnt) {
@@ -220,21 +262,35 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
         }
     }
 
-    if (!dev_info.config.eco_off_flag && host_keyboard_led_state().num_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
-        rgb_matrix_set_color(22, 0, 0, 100);
+    hsv.h = indicator_color_tab[per_info.ind_color_index][0];
+    hsv.s = indicator_color_tab[per_info.ind_color_index][1];
+    hsv.v = per_info.ind_brightness;
+    rgb   = hsv_to_rgb(hsv);
+    // clang-format off
+    if (!per_info.eco_tog_flag && \
+        ( \
+            ( \
+                (host_keyboard_led_state().num_lock && get_highest_layer(default_layer_state) == 0) && \
+                ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB)) \
+            ) || \
+                get_highest_layer(default_layer_state | layer_state) == 1 \
+        ) \
+    ) {
+        // clang-format on
+        rgb_matrix_set_color(22, rgb.r, rgb.g, rgb.b);
     } else {
         rgb_matrix_set_color(22, 0, 0, 0);
     }
 
-    if (dev_info.config.eco_off_flag) {
-        rgb_matrix_set_color(22, 0, 0, 0);
-    }
+    // if (per_info.eco_tog_flag) {
+    //     rgb_matrix_set_color(22, 0, 0, 0);
+    // }
 
     return true;
 }
 
 void keyboard_post_init_user() {
-    rgb_matrix_config.hsv.h = indicator_color_tab[dev_info.config.smd_color_index][0];
-    rgb_matrix_config.hsv.s = indicator_color_tab[dev_info.config.smd_color_index][1];
+    rgb_matrix_config.hsv.h = indicator_color_tab[per_info.smd_color_index][0];
+    rgb_matrix_config.hsv.s = indicator_color_tab[per_info.smd_color_index][1];
     rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
 }

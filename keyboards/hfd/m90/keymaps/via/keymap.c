@@ -285,24 +285,24 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                         VAL_OUT_blink_time  = timer_read32();
                         break;
                     case 1: // 开启睡眠1
-                        bts_send_vendor(v_dis_sleep_bt);
-                        bts_send_vendor(v_dis_sleep_wl);
+                        bts_send_vendor(v_en_sleep_bt);
+                        bts_send_vendor(v_en_sleep_wl);
                         VAL_OUT_blink_cnt   = 2;
                         VAL_OUT_LEDINDEX    = 57;
                         VAL_OUT_blink_color = (RGB){0, 0, 100};
                         VAL_OUT_blink_time  = timer_read32();
                         break;
                     case 2: // 开启睡眠2
-                        bts_send_vendor(v_dis_sleep_bt);
-                        bts_send_vendor(v_dis_sleep_wl);
+                        bts_send_vendor(v_en_sleep_bt);
+                        bts_send_vendor(v_en_sleep_wl);
                         VAL_OUT_blink_cnt   = 4;
                         VAL_OUT_LEDINDEX    = 57;
                         VAL_OUT_blink_color = (RGB){0, 0, 100};
                         VAL_OUT_blink_time  = timer_read32();
                         break;
                     case 3: // 开启睡眠3
-                        bts_send_vendor(v_dis_sleep_bt);
-                        bts_send_vendor(v_dis_sleep_wl);
+                        bts_send_vendor(v_en_sleep_bt);
+                        bts_send_vendor(v_en_sleep_wl);
                         VAL_OUT_blink_cnt   = 6;
                         VAL_OUT_LEDINDEX    = 57;
                         VAL_OUT_blink_color = (RGB){0, 0, 100};
@@ -370,30 +370,30 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     rgb   = hsv_to_rgb(hsv);
 
     // 系统指示灯逻辑
-    if (host_keyboard_led_state().num_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
+    if (!per_info.eco_tog_flag && host_keyboard_led_state().num_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
         rgb_matrix_set_color(84, rgb.r, rgb.g, rgb.b);
     } else {
         rgb_matrix_set_color(84, 0, 0, 0);
     }
 
-    if (host_keyboard_led_state().caps_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
+    if (!per_info.eco_tog_flag && host_keyboard_led_state().caps_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
         rgb_matrix_set_color(85, rgb.r, rgb.g, rgb.b);
     } else {
         rgb_matrix_set_color(85, 0, 0, 0);
     }
 
-    if (host_keyboard_led_state().scroll_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
+    if (!per_info.eco_tog_flag && host_keyboard_led_state().scroll_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
         rgb_matrix_set_color(86, rgb.r, rgb.g, rgb.b);
     } else {
         rgb_matrix_set_color(86, 0, 0, 0);
     }
 
     // ECO 模式处理
-    if (per_info.eco_tog_flag) {
-        for (uint8_t i = 84; i < RGB_MATRIX_LED_COUNT; i++) {
-            rgb_matrix_set_color(i, 0, 0, 0);
-        }
-    }
+    // if (per_info.eco_tog_flag) {
+    //     for (uint8_t i = 84; i < RGB_MATRIX_LED_COUNT; i++) {
+    //         rgb_matrix_set_color(i, 0, 0, 0);
+    //     }
+    // }
 
 #ifdef BT_MODE_ENABLE
     // return bt_indicator_rgb(led_min, led_max); // 使用新的函数名

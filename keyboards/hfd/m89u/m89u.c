@@ -3,6 +3,7 @@
 
 #include QMK_KEYBOARD_H
 #include "common/bt_task.h"
+#include "usb_main.h"
 
 // clang-format off
 
@@ -198,14 +199,6 @@ void matrix_init_kb(void) {
 void keyboard_post_init_kb(void) {
     per_info.raw = eeconfig_read_kb();
 
-    // 验证和修复可能的无效数据
-    // validate_per_info_ranges();
-
-    // DEBUG_PRINTF("Boot: per_info.raw=0x%08lX, backlight_off=%d, saved_rgb_mode=%d\n", per_info.raw, per_info.backlight_off, per_info.saved_rgb_mode);
-
-    // 新增：开机时显示 dev_info 状态
-    DEBUG_PRINTF("Boot: dev_info.raw=0x%08lX, devs=%d, last_devs=%d\n", dev_info.raw, dev_info.devs, dev_info.last_devs);
-
     if (per_info.backlight_off) {
         // 用户关闭了背光，设置为关闭模式
         rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_EFFECT_OFF);
@@ -224,7 +217,7 @@ void keyboard_post_init_kb(void) {
 void eeconfig_init_kb(void) {
     // 设置默认值
     per_info.sleep_mode      = 1;                       // 默认睡眠模式
-    per_info.ind_brightness  = RGB_MATRIX_VAL_STEP * 3; // 默认亮度
+    per_info.ind_brightness  = 200;                     // 默认亮度
     per_info.smd_color_index = 0;                       // 默认颜色
     per_info.ind_color_index = 0;                       // 默认颜色
     per_info.backlight_off   = true;                    // 默认关闭背光
@@ -251,9 +244,10 @@ void matrix_scan_kb(void) {
 
 #ifdef USB_SUSPEND_CHECK_ENABLE
     static uint32_t usb_suspend_timer = 0;
+    static uint32_t usb_suspend       = false;
 
     if (dev_info.devs == DEVS_USB) {
-        if (USB_DRIVER.state == USB_SUSPENDED) {
+        if (USB_DRIVER.state != USB_ACTIVE || USB_DRIVER.state == USB_SUSPENDED) {
             // USB挂起状态
             if (!usb_suspend_timer) {
                 // 开始计时
@@ -262,12 +256,11 @@ void matrix_scan_kb(void) {
             } else if (timer_elapsed32(usb_suspend_timer) > 10000) {
                 // 挂起超过10秒，关闭背光
                 dprintf("USB suspended for 10s, turning off lights\n");
-
-                led_deconfig_all();
-#    ifdef ENTRY_STOP_MODE
-                // 可选：进入深度睡眠
-                // lp_system_sleep();
-#    endif
+                if (!usb_suspend) {
+                    // 如果之前没有进入挂起状态，执行挂起操作
+                    usb_suspend = true;
+                    led_deconfig_all();
+                }
                 usb_suspend_timer = 0;
             }
         } else {
@@ -275,12 +268,12 @@ void matrix_scan_kb(void) {
             if (usb_suspend_timer) {
                 dprintf("USB resumed, canceling suspend timer\n");
                 usb_suspend_timer = 0;
-
-                // 可选：恢复背光
-                // if (!led_inited) {
-                //     led_config_all();
-                // }
             }
+        }
+    } else {
+        if (usb_suspend) {
+            usb_suspend = false;
+            led_config_all();
         }
     }
 #endif
@@ -312,25 +305,19 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     return true;
 }
 
-extern bool eco_switch_flag;
-
 #ifdef DIP_SWITCH_ENABLE
+// 拨动开关选择系统模式
 bool dip_switch_update_kb(uint8_t index, bool active) {
     if (!dip_switch_update_user(index, active)) {
         return false;
     }
-
     if (index == 0) {
-        if (active) {
-            eco_switch_flag              = true;
-            dev_info.config.eco_off_flag = false;
-        } else {
-            eco_switch_flag              = false;
-            dev_info.config.eco_off_flag = true;
+        default_layer_set(1UL << ((!active) ? 0 : 1));
+        if (!active) {
+            layer_off(2);
         }
-        eeconfig_update_user(dev_info.raw);
     }
-
     return true;
 }
+
 #endif // DIP_SWITCH_ENABLE
