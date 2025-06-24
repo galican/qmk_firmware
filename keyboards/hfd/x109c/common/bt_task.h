@@ -14,6 +14,7 @@
 #include "host.h"
 #include "keycode.h"
 #include "keyboard.h"
+// #include "keymap.h"
 #include "mousekey.h"
 #include "programmable_button.h"
 #include "command.h"
@@ -25,6 +26,8 @@
 #include "wait.h"
 #include "keycode_config.h" // #define BT_DEBUG_MODE
 
+#include "x109c.h"
+
 // #define BT_DEBUG_MODE
 #define ENTRY_STOP_TIMEOUT 100 // ms
 // #define ENTRY_STOP_TIMEOUT (30 * 60000) // ms
@@ -34,27 +37,11 @@ typedef union {
     struct {
         uint8_t devs;
         uint8_t last_devs;
-        bool rsync_flag;
-        uint8_t custom_numlock : 1; // 新增：自定义 NumLock 状态
+        uint8_t LCD_PAGE;
+        bool    sleep_off_flag;
     };
 } dev_info_t;
 
-// 在 bt_task.h 中
-typedef union PACKED {
-    uint32_t raw;
-    struct {
-        uint8_t sleep_mode : 2;      // 0-3 (4种)
-        uint8_t ind_brightness : 8;  // 0-255 (256种)
-        uint8_t smd_color_index : 4; // 0-15 (9种，0-8有效)
-        uint8_t ind_color_index : 4; // 0-15 (9种，0-8有效)
-        uint8_t saved_rgb_mode : 5;  // 0-31 (22种，0-21有效)
-        bool    backlight_off : 1;   // 0-1
-        bool    eco_tog_flag : 1;    // 0-1
-        uint8_t reserved : 7;        // 剩余7位预留
-    };
-} per_info_t;
-
-extern per_info_t per_info;
 extern dev_info_t dev_info;
 extern bts_info_t bts_info;
 
@@ -85,7 +72,7 @@ bool process_record_bt(uint16_t keycode, keyrecord_t *record);
  * @param None
  * @return None
  */
-bool bt_indicator_rgb(uint8_t led_min, uint8_t led_max);
+uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max);
 
 /**
  * @brief 切换工作模式
@@ -93,3 +80,15 @@ bool bt_indicator_rgb(uint8_t led_min, uint8_t led_max);
  * @return None
  */
 void bt_switch_mode(uint8_t last_mode, uint8_t now_mode, uint8_t reset);
+
+enum _led_ble {
+    LED_BLE_PAIR = 1,
+    LED_BLE_CONN,
+};
+
+#define BLE_CONN_TIMEOUT ((2 * 60 - 12) * 1000)
+#define BLE_PAIR_TIMEOUT ((10 - 4) * 1000)
+#define LED_BLE_PAIR_INTVL_MS (200)
+#define LED_BLE_CONN_INTVL_MS (500)
+
+bool get_kb_sleep_flag(void);

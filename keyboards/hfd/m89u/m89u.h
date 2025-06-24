@@ -20,5 +20,7 @@ enum bt_keycodes {
     KEYBOARD_RESET,
     BLE_RESET,
     SLEEP_TOGGLE,
+    CUSTOM_DOT,
+    NUM_NUM_lOCK,
     RGB_TEST,
 };

@@ -234,6 +234,9 @@ void eeconfig_init_kb(void) {
     eeconfig_update_kb(per_info.raw);
     eeconfig_update_rgb_matrix(&rgb_matrix_config);
 
+    dev_info.custom_numlock = true; // 默认启用自定义 NumLock 状态
+    eeconfig_update_user(dev_info.raw);
+
     eeconfig_init_user();
 }
 
@@ -314,7 +317,9 @@ bool dip_switch_update_kb(uint8_t index, bool active) {
     if (index == 0) {
         default_layer_set(1UL << ((!active) ? 0 : 1));
         if (!active) {
-            layer_off(2);
+            layer_state_set(0);
+        } else {
+            layer_state_set(1);
         }
     }
     return true;

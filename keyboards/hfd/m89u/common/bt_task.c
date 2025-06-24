@@ -539,16 +539,19 @@ static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
 
         case SW_OS: {
             if (record->event.pressed) {
-                if (get_highest_layer(default_layer_state) == 0) {
-                    set_single_persistent_default_layer(2);
-                    keymap_config.no_gui = 0;
-                    eeconfig_update_keymap(&keymap_config);
+                static bool os_switch = false;
+                if (!os_switch) {
+                    // set_single_persistent_default_layer(2);
+                    // keymap_config.no_gui = 0;
+                    // eeconfig_update_keymap(&keymap_config);
+                    os_switch          = true;
                     single_blink_index = 20;
                     single_blink_time  = timer_read32();
                     single_blink_cnt   = 6;
-                    single_blink_color = (RGB){100, 100, 100};
-                } else if (get_highest_layer(default_layer_state) == 2) {
-                    set_single_persistent_default_layer(0);
+                    single_blink_color = (RGB){0, 0, 200};
+                } else if (os_switch) {
+                    // set_single_persistent_default_layer(0);
+                    os_switch          = false;
                     single_blink_index = 20;
                     single_blink_time  = timer_read32();
                     single_blink_cnt   = 6;
@@ -1032,9 +1035,26 @@ static void handle_factory_reset_display(void) {
         }
 
         rgb_matrix_set_color_all(0, 0, 0);
-        uint8_t reset_leds[] = {LED_RST_ALL, LED_RST_LYR, LED_RST_BLE}; // factory, keyboard, ble
+        static uint8_t reset_leds[][3] = {{13}, {12}, {16, 17, 18}};
         if (factory_reset_status >= 1 && factory_reset_status <= 3) {
-            rgb_matrix_set_color(reset_leds[factory_reset_status - 1], 200, 0, 0);
+            switch (factory_reset_status) {
+                case 1: {
+                    rgb_matrix_set_color(reset_leds[factory_reset_status - 1][0], 100, 100, 100);
+                    break;
+                }
+                case 2: {
+                    rgb_matrix_set_color(reset_leds[factory_reset_status - 1][0], 100, 100, 100);
+                    break;
+                }
+                case 3: {
+                    for (uint8_t i = 0; i < 3; i++) {
+                        rgb_matrix_set_color(reset_leds[factory_reset_status - 1][i], 100, 100, 100);
+                    }
+                    break;
+                }
+                default:
+                    break;
+            }
         }
     }
 }
@@ -1099,6 +1119,8 @@ static void handle_charging_indication(void) {
                     if (charge_complete_warning.blink_state) {
                         charge_complete_warning.blink_count++;
                         if (charge_complete_warning.blink_count >= 5) {
+                            extern bool charge_in;
+                            charge_in                           = true;
                             charge_complete_warning.completed   = true;
                             charge_complete_warning.blink_state = false;
                         }

@@ -75,7 +75,9 @@
         {"name":"FACTORY_RESET","title":"Reset the PCB setting","shortName":"FACTORY"},
         {"name":"KEYBOARD_RESET","title":"Reset the keyboard resetting","shortName":"KBY_RES"},
         {"name":"BLE_RESET","title":"Reset the Bluetooth setting","shortName":"BLE_RES"},
-        {"name":"SLEEP_TOGGLE","title":"Switch the sleep level","shortName":"SW_SELP"}
+        {"name":"SLEEP_TOGGLE","title":"Switch the sleep level","shortName":"SW_SELP"},
+        {"name":"CUSTOM_DOT","title":"Custom dot","shortName":"CUST_DOT"},
+        {"name":"NUM_NUM_lOCK","title":"Custom number lock","shortName":"NN_LOCK"}
       ],
     "layouts": {
        "keymap":[

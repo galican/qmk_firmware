@@ -34,10 +34,14 @@ enum __layers {
 #define BLE_RES BLE_RESET
 #define SW_SLEP SLEEP_TOGGLE
 
+#define NN_LOCK NUM_NUM_lOCK
+
 static uint8_t  VAL_OUT_LEDINDEX;
 static uint8_t  VAL_OUT_blink_cnt;
 static RGB      VAL_OUT_blink_color;
 static uint32_t VAL_OUT_blink_time;
+
+static uint8_t custom_numlock_state;
 
 static uint8_t indicator_color_tab[][3] = {
     {HSV_BLUE},    // BLUE
@@ -66,16 +70,16 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [1] = LAYOUT_numpad_6x4(
         KC_ESC,  KC_TAB,  KC_BSPC, MO(3),
-        TO(2),   KC_EQL,  KC_PSLS, KC_PAST,
-        KC_P7,   KC_P8,   KC_P9,   KC_PMNS,
-        KC_P4,   KC_P5,   KC_P6,   KC_PPLS,
-        KC_P1,   KC_P2,   KC_P3,   KC_PENT,
-                 KC_P0,   KC_PDOT
+        NN_LOCK, KC_EQL,  KC_PSLS, KC_PAST,
+        KC_7,    KC_8,    KC_9,    KC_PMNS,
+        KC_4,    KC_5,    KC_6,    KC_PPLS,
+        KC_1,    KC_2,    KC_3,    KC_PENT,
+                 KC_0,   CUSTOM_DOT
     ),
 
     [2] = LAYOUT_numpad_6x4(
         KC_ESC,  KC_TAB,  KC_BSPC, MO(3),
-        TO(1),   KC_EQL,  KC_PSLS, KC_PAST,
+        NN_LOCK, KC_EQL,  KC_PSLS, KC_PAST,
         KC_HOME, KC_UP,   KC_PGUP, KC_PMNS,
         KC_LEFT, _______, KC_RGHT, KC_PPLS,
         KC_END,  KC_DOWN, KC_PGDN, KC_PENT,
@@ -88,14 +92,65 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         RGB_HUI, RGB_VAI, RGB_MOD, RGB_SAI,
         BT_2_4G, BT_USB,  RGB_SPI, _______,
         BT_HOST1,BT_HOST2,BT_HOST3,_______,
-                 SW_OS,   RGB_TEST
+        SW_OS, RGB_TEST
     )
+};
+
+// 完整的键位映射表
+uint16_t num_table[] = {
+    KC_ESC,  KC_TAB,  KC_BSPC, MO(3),
+    NN_LOCK, KC_EQL,  KC_PSLS, KC_PAST,
+    KC_7,    KC_8,    KC_9,    KC_PMNS,
+    KC_4,    KC_5,    KC_6,    KC_PPLS,
+    KC_1,    KC_2,    KC_3,    KC_PENT,
+             KC_0,    CUSTOM_DOT
+};
+
+uint16_t num_lock_table[] = {
+    KC_ESC,  KC_TAB,  KC_BSPC, MO(3),
+    NN_LOCK, KC_EQL,  KC_PSLS, KC_PAST,
+    KC_HOME, KC_UP,   KC_PGUP, KC_PMNS,
+    KC_LEFT, KC_5,   KC_RGHT, KC_PPLS,
+    KC_END,  KC_DOWN, KC_PGDN, KC_PENT,
+             KC_INS,  KC_DEL
+};
+
+// 键位映射关系表 (行, 列)
+uint8_t keymap_positions[][2] = {
+    {0, 0}, {0, 1}, {0, 2}, {0, 3},  // 第一行
+    {1, 0}, {1, 1}, {1, 2}, {1, 3},  // 第二行
+    {2, 0}, {2, 1}, {2, 2}, {2, 3},  // 第三行
+    {3, 0}, {3, 1}, {3, 2}, {3, 3},  // 第四行
+    {4, 0}, {4, 1}, {4, 2}, {4, 3},  // 第五行
+    {5, 1}, {5, 2}                   // 第六行 (只有两个键)
 };
 
 // clang-format on
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
+        case NN_LOCK: {
+            if (record->event.pressed) {
+                // 切换 NumLock 状态
+                custom_numlock_state = !custom_numlock_state;
+
+                // 根据当前状态选择键位表
+                uint16_t *target_table = custom_numlock_state ? num_table : num_lock_table;
+
+                // 更新第1层的所有键位映射
+                for (size_t i = 0; i < 22; i++) {
+                    uint8_t row = keymap_positions[i][0];
+                    uint8_t col = keymap_positions[i][1];
+                    dynamic_keymap_set_keycode(1, row, col, target_table[i]);
+                }
+
+                // 可选：保存状态到 EEPROM
+                dev_info.custom_numlock = custom_numlock_state;
+                eeconfig_update_user(dev_info.raw);
+            }
+            return false;
+        }
+
         case RGB_VAI: {
             if (record->event.pressed) {
                 if (rgb_matrix_get_val() == RGB_MATRIX_MAXIMUM_BRIGHTNESS) {
@@ -188,7 +243,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case KEY_ECO: {
             if (record->event.pressed) {
                 per_info.eco_tog_flag = !per_info.eco_tog_flag;
-                eeconfig_update_user(dev_info.raw);
+                eeconfig_update_kb(per_info.raw);
             }
             return false;
         }
@@ -239,15 +294,39 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         }
             return false;
 
+        case TO(2): {
+            if (record->event.pressed) {
+                dev_info.rsync_flag = true;
+                eeconfig_update_user(dev_info.raw);
+            }
+            break;
+        }
+        case TO(1): {
+            if (record->event.pressed) {
+                dev_info.rsync_flag = false;
+                eeconfig_update_user(dev_info.raw);
+            }
+            break;
+        }
+
+        case CUSTOM_DOT:
+            if (record->event.pressed) {
+                send_string("."); // 直接发送点号字符
+            }
+            return false;
+
         default: {
             // 处理其他按键
             return true; // 允许默认处理
         }
     }
+    return true;
 }
 
 static HSV hsv;
 static RGB rgb;
+
+bool charge_in = false;
 
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     if (VAL_OUT_blink_cnt) {
@@ -266,17 +345,28 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     hsv.s = indicator_color_tab[per_info.ind_color_index][1];
     hsv.v = per_info.ind_brightness;
     rgb   = hsv_to_rgb(hsv);
-    // clang-format off
-    if (!per_info.eco_tog_flag && \
-        ( \
-            ( \
-                (host_keyboard_led_state().num_lock && get_highest_layer(default_layer_state) == 0) && \
-                ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB)) \
-            ) || \
-                get_highest_layer(default_layer_state | layer_state) == 1 \
-        ) \
-    ) {
-        // clang-format on
+
+    // if (!per_info.eco_tog_flag && ((host_keyboard_led_state().num_lock && (get_highest_layer(default_layer_state | layer_state) == 0) && (bts_info.bt_info.paired || dev_info.devs == DEVS_USB)) || (get_highest_layer(default_layer_state | layer_state) == 1))) {
+    //     rgb_matrix_set_color(22, rgb.r, rgb.g, rgb.b);
+    // } else {
+    //     rgb_matrix_set_color(22, 0, 0, 0);
+    // }
+    // NumLock 指示逻辑
+    bool should_show_numlock = false;
+
+    if (!per_info.eco_tog_flag) {
+        uint8_t current_layer = get_highest_layer(default_layer_state | layer_state);
+
+        if (current_layer == 0) {
+            // PAD_B 层：显示系统 NumLock 状态
+            should_show_numlock = (host_keyboard_led_state().num_lock && (bts_info.bt_info.paired || dev_info.devs == DEVS_USB));
+        } else if (current_layer == 1) {
+            // 自定义数字层：显示自定义 NumLock 状态
+            should_show_numlock = custom_numlock_state;
+        }
+    }
+
+    if (should_show_numlock && charge_in) {
         rgb_matrix_set_color(22, rgb.r, rgb.g, rgb.b);
     } else {
         rgb_matrix_set_color(22, 0, 0, 0);
@@ -290,6 +380,17 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 }
 
 void keyboard_post_init_user() {
+    // 恢复保存的 NumLock 状态
+    custom_numlock_state = dev_info.custom_numlock;
+
+    // 应用对应的键位映射
+    uint16_t *target_table = custom_numlock_state ? num_table : num_lock_table;
+    for (size_t i = 0; i < 22; i++) {
+        uint8_t row = keymap_positions[i][0];
+        uint8_t col = keymap_positions[i][1];
+        dynamic_keymap_set_keycode(1, row, col, target_table[i]);
+    }
+
     rgb_matrix_config.hsv.h = indicator_color_tab[per_info.smd_color_index][0];
     rgb_matrix_config.hsv.s = indicator_color_tab[per_info.smd_color_index][1];
     rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
