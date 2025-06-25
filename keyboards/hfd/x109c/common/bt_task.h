@@ -86,8 +86,8 @@ enum _led_ble {
     LED_BLE_CONN,
 };
 
-#define BLE_CONN_TIMEOUT ((2 * 60 - 12) * 1000)
-#define BLE_PAIR_TIMEOUT ((10 - 4) * 1000)
+#define BLE_CONN_TIMEOUT ((10) * 1000)
+#define BLE_PAIR_TIMEOUT ((1 * 60 - 8) * 1000)
 #define LED_BLE_PAIR_INTVL_MS (200)
 #define LED_BLE_CONN_INTVL_MS (500)
 

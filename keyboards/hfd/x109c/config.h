@@ -22,6 +22,8 @@
 #  define BT_MODE_SW_PIN C13 // 低电平时
 #  define RF_MODE_SW_PIN C14 // 低电平时
 
+#define WS2812_EN_PIN B7 // WS2812 Enable pin
+
 // #  define LED_CAPS_LOCK_PIN C10
 // #define LED_MAC_OS_PIN B11
 // #define LED_WIN_LOCK_PIN B12

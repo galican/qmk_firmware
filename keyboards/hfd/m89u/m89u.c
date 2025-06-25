@@ -271,10 +271,16 @@ void matrix_scan_kb(void) {
             if (usb_suspend_timer) {
                 dprintf("USB resumed, canceling suspend timer\n");
                 usb_suspend_timer = 0;
+                if (usb_suspend) {
+                    // 如果之前处于挂起状态，恢复背光
+                    usb_suspend = false;
+                    led_config_all();
+                }
             }
         }
     } else {
         if (usb_suspend) {
+            usb_suspend_timer = 0;
             usb_suspend = false;
             led_config_all();
         }

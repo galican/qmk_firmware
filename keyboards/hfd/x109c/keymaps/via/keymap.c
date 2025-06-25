@@ -49,16 +49,15 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 		KC_LCTL, KC_LGUI, KC_LALT,                   KC_SPC,                             KC_RALT, MO(WIN_FN), KC_RCTL,       KC_LEFT, KC_DOWN, KC_RGHT),
 
     [WIN_FN] = LAYOUT_78_ansi( /* FN */
-		EE_CLR,  KC_BRID, KC_BRIU, KC_TASK, KC_MYCM, KC_WSCH, KC_SNAP, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD, KC_VOLU, _______, _______,
-		_______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-		_______, BT_2_4G,BT_HOST1,BT_HOST2,BT_HOST3, _______, _______, _______, KC_PSCR, KC_SCRL, KC_PAUS, _______, _______, _______,
-		_______, _______, _______, _______, _______, _______, _______, _______, KC_INS,  KC_HOME, KC_PGUP, _______,          _______,
+		EE_CLR,  KC_BRID, KC_BRIU, KC_TASK, KC_MYCM, KC_WSCH, KC_SNAP, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD, KC_VOLU, _______, LCD_MOD,
+		_______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, RGB_SAD,
+		_______, BT_2_4G,BT_HOST1,BT_HOST2,BT_HOST3, _______, _______, _______, KC_PSCR, KC_SCRL, KC_PAUS, _______, _______, RGB_SAI,
+		_______, _______, _______, _______, _______, _______, _______, _______, KC_INS,  KC_HOME, KC_PGUP, _______,          RGB_HUI,
 		_______, _______, _______, _______, _______, _______, _______, _______, _______, KC_END,  KC_PGDN,                   RGB_MOD, RGB_VAI,
 		_______, GU_TOGG, _______,                   _______,                            _______, _______, _______,          RGB_SPD, RGB_VAD, RGB_SPI),
 
     [MAC_B] = LAYOUT_78_ansi( /* Base */
-		// KC_ESC,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  KC_DEL,  KC_MUTE,
-        KC_ESC,  KC_BRID, KC_BRIU, KC_MCTL, KC_LPAD, KC_SIRI, KC_SSHOT,KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD, KC_VOLU, _______, _______,
+        KC_ESC,  KC_BRID, KC_BRIU, KC_MCTL, KC_LPAD, KC_SIRI, KC_SSHOT,KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD, KC_VOLU, KC_DEL,  KC_MUTE,
 		KC_GRV,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC,
 		KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC, KC_BSLS,
 		KC_CAPS, KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,          KC_ENT,
@@ -66,12 +65,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 		KC_LCTL, KC_LOPT, KC_LCMD,                   KC_SPC,                                      KC_RCMD,MO(MAC_FN),KC_RCTL,KC_LEFT, KC_DOWN, KC_RGHT),
 
     [MAC_FN] = LAYOUT_78_ansi( /* FN */
-		// EE_CLR,  KC_BRID, KC_BRIU, KC_MCTL, KC_LPAD, KC_SIRI, KC_PSCR, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD, KC_VOLU, _______, _______,
-        EE_CLR,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  KC_DEL,  KC_MUTE,
-		_______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-		_______, BT_2_4G,BT_HOST1,BT_HOST2,BT_HOST3, _______, _______, _______, KC_PSCR, KC_SCRL, KC_PAUS, _______, _______, _______,
-		_______, _______, _______, _______, _______, _______, _______, _______, KC_INS,  KC_HOME, KC_PGUP, _______,          _______,
-		_______, _______, _______, _______, _______, _______, _______, _______, _______, KC_END,  KC_PGDN,                   _______, RGB_VAI,
+        EE_CLR,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  _______, LCD_MOD,
+		_______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, RGB_SAD,
+		_______, BT_2_4G,BT_HOST1,BT_HOST2,BT_HOST3, _______, _______, _______, KC_PSCR, KC_SCRL, KC_PAUS, _______, _______, RGB_SAI,
+		_______, _______, _______, _______, _______, _______, _______, _______, KC_INS,  KC_HOME, KC_PGUP, _______,          RGB_HUI,
+		_______, _______, _______, _______, _______, _______, _______, _______, _______, KC_END,  KC_PGDN,                   RGB_MOD, RGB_VAI,
 		_______, GU_TOGG, _______,                   _______,                            _______, _______, _______,          RGB_SPD, RGB_VAD, RGB_SPI),
 };
 
@@ -89,6 +87,7 @@ const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][2] = {
 // void encoder_layer_set(void) {
 //     ENC_VOL_MODE = !ENC_VOL_MODE;
 // }
+static bool lcd_mode_enabled = false;
 
 // clang-format on
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -210,6 +209,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 LCD_vol_update(true);
             }
             return true;
+
+        case LCD_MOD: {
+            if (record->event.pressed) {
+                lcd_mode_enabled = !lcd_mode_enabled;
+            }
+        }
+
         default:
             break;
     }
@@ -219,4 +225,44 @@ void housekeeping_task_user(void) {}
 
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     return true;
+}
+
+bool encoder_update_user(uint8_t index, bool clockwise) {
+    if (!lcd_mode_enabled) {
+        if (index == 0) { /* First encoder */
+            if (clockwise) {
+                tap_code(KC_VOLU);
+            } else {
+                tap_code(KC_VOLD);
+            }
+        }
+        return false; // Skip further processing for this encoder
+    } else {
+        if (index == 0) { /* First encoder */
+            if (clockwise) {
+                // tap_code(KC_PGDN);
+                // unregister_code(KC_VOLU);
+                if (dev_info.LCD_PAGE == 1) {
+                    dev_info.LCD_PAGE = 0;
+                } else {
+                    dev_info.LCD_PAGE++;
+                }
+                eeconfig_update_user(dev_info.raw);
+                LCD_Page_update(dev_info.LCD_PAGE);
+                // LCD_command_update(LCD_SWITCH);
+            } else {
+                // tap_code(KC_PGUP);
+                // unregister_code(KC_VOLD);
+                if (dev_info.LCD_PAGE == 0) {
+                    dev_info.LCD_PAGE = 1;
+                } else {
+                    dev_info.LCD_PAGE--;
+                }
+                eeconfig_update_user(dev_info.raw);
+                LCD_Page_update(dev_info.LCD_PAGE);
+                // LCD_command_update(LCD_SWITCH);
+            }
+        }
+        return false;
+    }
 }

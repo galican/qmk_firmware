@@ -9,25 +9,25 @@
 #include "lcd_drv/lcd.h"
 
 enum bt_keycodes {
-  BT_HOST1 = QK_KB_0,
-  BT_HOST2,
-  BT_HOST3,
-  BT_2_4G,
-  BT_USB,
-  BT_VOL,
-  LCD_HOME,
-  LCD_PAGE,
-  KC_SNAP,
-  KC_SSHOT,
-  LCD_SW,
-  SLP_TG,
-  RGB_TEST,
-  BT_SW,
-  FN_FUN,
+    BT_HOST1 = QK_KB_0,
+    BT_HOST2,
+    BT_HOST3,
+    BT_2_4G,
+    BT_USB,
+    BT_VOL,
+    LCD_HOME,
+    LCD_PAGE,
+    KC_SNAP,
+    KC_SSHOT,
+    LCD_SW,
+    SLP_TG,
+    RGB_TEST,
+    BT_SW,
+    LCD_MOD,
 
-  // EN_VOLU,
-  // EN_VOLD,
-  // EN_MODE,
+    // EN_VOLU,
+    // EN_VOLD,
+    // EN_MODE,
 };
 
 #define LCD_init() uart3_init(115200)
@@ -39,7 +39,7 @@ void LCD_charge_update(void);
 void LCD_command_update(uint8_t LCD_command);
 void LCD_DATA_receive(void);
 
-enum LCD_command{
+enum LCD_command {
     LCD_RESET = 0,
     LCD_SLEEP,
     LCD_WEAKUP,

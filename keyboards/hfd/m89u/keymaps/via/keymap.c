@@ -74,7 +74,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_7,    KC_8,    KC_9,    KC_PMNS,
         KC_4,    KC_5,    KC_6,    KC_PPLS,
         KC_1,    KC_2,    KC_3,    KC_PENT,
-                 KC_0,   CUSTOM_DOT
+                 KC_0,    KC_DOT
     ),
 
     [PAD_B_FN] = LAYOUT_numpad_6x4(
@@ -83,7 +83,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         RGB_HUI, RGB_VAI, RGB_MOD, RGB_SAI,
         BT_2_4G, BT_USB,  RGB_SPI, _______,
         BT_HOST1,BT_HOST2,BT_HOST3,_______,
-        SW_OS, RGB_TEST
+        SW_OS,   RGB_TEST
     ),
 
     [PAD_A_FN] = LAYOUT_numpad_6x4(
@@ -92,7 +92,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         RGB_HUI, RGB_VAI, RGB_MOD, RGB_SAI,
         BT_2_4G, BT_USB,  RGB_SPI, _______,
         BT_HOST1,BT_HOST2,BT_HOST3,_______,
-        SW_OS, RGB_TEST
+        SW_OS,   RGB_TEST
     )
 };
 
@@ -103,7 +103,7 @@ uint16_t num_table[] = {
     KC_7,    KC_8,    KC_9,    KC_PMNS,
     KC_4,    KC_5,    KC_6,    KC_PPLS,
     KC_1,    KC_2,    KC_3,    KC_PENT,
-             KC_0,    CUSTOM_DOT
+             KC_0,    KC_DOT
 };
 
 uint16_t num_lock_table[] = {
@@ -294,11 +294,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         }
             return false;
 
-        case CUSTOM_DOT:
-            if (record->event.pressed) {
-                send_string("."); // 直接发送点号字符
-            }
-            return false;
+        // case CUSTOM_DOT:
+        //     if (record->event.pressed) {
+        //         send_string("."); // 直接发送点号字符
+        //     }
+        //     return false;
 
         default: {
             // 处理其他按键
@@ -311,7 +311,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 static HSV hsv;
 static RGB rgb;
 
-bool charge_in = false;
+bool charge_in = true;
 
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     if (VAL_OUT_blink_cnt) {

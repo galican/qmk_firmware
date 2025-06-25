@@ -1099,6 +1099,7 @@ static void handle_layer_indication(void) {
 static void handle_charging_indication(void) {
     if (!readPin(BT_CABLE_PIN)) {
         if (readPin(BT_CHARGE_PIN)) {
+            extern bool charge_in;
             // 充满状态
             if (!is_in_full_power_state) {
                 is_in_full_power_state = true;
@@ -1108,6 +1109,7 @@ static void handle_charging_indication(void) {
                     charge_complete_warning.blink_time  = timer_read32();
                     charge_complete_warning.blink_state = false;
                     charge_complete_warning.completed   = false;
+                    charge_in                           = false;
                 }
             }
 

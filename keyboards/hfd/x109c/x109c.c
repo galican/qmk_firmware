@@ -48,7 +48,8 @@ void led_config_all(void) {
         }
         // setPinOutputOpenDrain(RGB_DRIVER_SDB_PIN);
         // writePinHigh(RGB_DRIVER_SDB_PIN);
-
+        setPinOutputPushPull(WS2812_EN_PIN);
+        writePinLow(WS2812_EN_PIN);
         // setPinOutput(LED_MAC_OS_PIN); // LDE2 MAC\WIN
         // writePinLow(LED_MAC_OS_PIN);
         // setPinOutput(LED_WIN_LOCK_PIN); // LED3 Win Lock
@@ -64,7 +65,8 @@ void led_config_all(void) {
 void led_deconfig_all(void) {
     if (led_inited) {
         // Set our LED pins as input
-
+        setPinOutputPushPull(WS2812_EN_PIN);
+        writePinHigh(WS2812_EN_PIN);
         // writePinLow(LED_CAPS_LOCK_PIN);
         // writePinLow(LED_MAC_OS_PIN);
         // writePinLow(LED_WIN_LOCK_PIN);
@@ -261,6 +263,10 @@ void lp_recovery_hook(void) {
 }
 
 void matrix_init_kb(void) {
+#ifdef WS2812_EN_PIN
+    setPinOutput(WS2812_EN_PIN);
+    writePinLow(WS2812_EN_PIN);
+#endif
 #ifdef RGB_DRIVER_SDB_PIN
     setPinOutputOpenDrain(RGB_DRIVER_SDB_PIN);
     writePinHigh(RGB_DRIVER_SDB_PIN);

@@ -33,7 +33,7 @@ typedef struct {
 uint32_t   bt_init_time = 0;
 dev_info_t dev_info     = {0};
 bts_info_t bts_info     = {
-        .bt_name        = {"Bluetooth keyboar", "Bluetooth keyboar", "Bluetooth keyboar"},
+        .bt_name        = {"BT keyboard", "BT keyboard", "BT keyboard"},
         .uart_init      = uart_init,
         .uart_read      = uart_read,
         .uart_transmit  = uart_transmit,
@@ -479,6 +479,11 @@ void bt_switch_mode(uint8_t last_mode, uint8_t now_mode, uint8_t reset) {
     }
 
     dev_info.devs = now_mode;
+
+    if (dev_info.devs != dev_info.last_devs) {
+        extern uint32_t last_total_time;
+        last_total_time = timer_read32();
+    }
     if ((dev_info.devs != DEVS_USB) && (dev_info.devs != DEVS_2_4G)) {
         dev_info.last_devs = dev_info.devs;
     }
@@ -1294,17 +1299,17 @@ void open_rgb(void) {
     }
 }
 
-uint8_t indicator_status          = 2;
-uint8_t indicator_reset_last_time = false;
+uint8_t  indicator_status          = 2;
+uint8_t  indicator_reset_last_time = false;
+uint32_t last_total_time           = 0;
 
 void led_ble(void) {
-    uint8_t         rgb_index       = rgb_index_table[dev_info.devs];
-    static uint32_t last_time       = 0;
-    static uint32_t last_long_time  = 0;
-    static uint32_t last_total_time = 0;
-    static uint8_t  last_status     = 0;
-    static bool     rgb_flip        = false;
-    static RGB      rgb             = {0};
+    uint8_t         rgb_index      = rgb_index_table[dev_info.devs];
+    static uint32_t last_time      = 0;
+    static uint32_t last_long_time = 0;
+    static uint8_t  last_status    = 0;
+    static bool     rgb_flip       = false;
+    static RGB      rgb            = {0};
 
     if (last_status != indicator_status) {
         last_status     = indicator_status;
