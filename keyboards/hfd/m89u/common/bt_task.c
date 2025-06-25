@@ -976,15 +976,6 @@ static void handle_usb_indicate_led(void) {
 // RGB指示器处理函数
 // ===========================================
 static void handle_factory_reset_display(void) {
-#define LED_PAST 7
-#define LED_RST_ALL LED_PAST
-
-#define LED_PSLS 6
-#define LED_RST_LYR LED_PSLS
-
-#define LED_EQL 5
-#define LED_RST_BLE LED_EQL
-
     if (factory_reset_status) {
         if (timer_elapsed32(factory_reset_press_time) >= factory_reset_press_cnt * 500) {
             factory_reset_press_cnt++;
@@ -1002,6 +993,11 @@ static void handle_factory_reset_display(void) {
                     // eeconfig_update_keymap(&keymap_config);
                     keymap_config.nkro = false;
                     eeconfig_update_keymap(&keymap_config);
+                    {
+                        rgb_matrix_config.hsv.h = 170;
+                        rgb_matrix_config.mode  = RGB_MATRIX_CUSTOM_EFFECT_OFF;
+                    }
+                    // eeconfig_update_rgb_matrix_default();
                     if (readPin(BT_MODE_SW_PIN) && (dev_info.devs != DEVS_USB)) {
                         bts_send_vendor(v_clear);
                         bts_info.bt_info.pairing = false;
@@ -1015,6 +1011,11 @@ static void handle_factory_reset_display(void) {
                     eeconfig_init();
                     keymap_config.nkro = false;
                     eeconfig_update_keymap(&keymap_config);
+                    {
+                        rgb_matrix_config.hsv.h = 170;
+                        rgb_matrix_config.mode  = RGB_MATRIX_CUSTOM_EFFECT_OFF;
+                    }
+                    // eeconfig_update_rgb_matrix_default();
                     break;
 
                 case 3: // ble reset
@@ -1090,7 +1091,7 @@ static void handle_blink_effects(void) {
 
 static void handle_layer_indication(void) {
     // FN 按下时显示当前设备状态
-    if ((get_highest_layer(layer_state) == 3)) {
+    if ((get_highest_layer(layer_state) == 2) || (get_highest_layer(layer_state) == 3)) {
         rgb_matrix_set_color(rgb_index_table[dev_info.devs], RGB_BLUE);
     }
 }
@@ -1210,7 +1211,7 @@ static void handle_battery_query_display(void) {
         bts_send_vendor(v_query_vol);
     }
 
-    if (get_highest_layer(layer_state) == 3) {
+    if (get_highest_layer(layer_state) == 2 || get_highest_layer(layer_state) == 3) {
         uint8_t pvol = bts_info.bt_info.pvol;
 
         // 根据电量确定颜色

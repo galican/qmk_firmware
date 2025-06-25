@@ -20,9 +20,9 @@
 
 enum __layers {
     PAD_B,
-    PAD_RESERVED1,
-    PAD_RESERVED2,
-    PAD_FN,
+    PAD_A,
+    PAD_B_FN,
+    PAD_A_FN,
 };
 
 #define IND_HUE INDICATOR_HUE
@@ -60,7 +60,7 @@ static uint8_t indicator_color_tab[][3] = {
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
     [PAD_B] = LAYOUT_numpad_6x4(
-        KC_ESC,  KC_TAB,  KC_BSPC, MO(3),
+        KC_ESC,  KC_TAB,  KC_BSPC, MO(2),
         KC_NUM,  KC_EQL,  KC_PSLS, KC_PAST,
         KC_P7,   KC_P8,   KC_P9,   KC_PMNS,
         KC_P4,   KC_P5,   KC_P6,   KC_PPLS,
@@ -68,7 +68,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                  KC_P0,   KC_PDOT
     ),
 
-    [1] = LAYOUT_numpad_6x4(
+    [PAD_A] = LAYOUT_numpad_6x4(
         KC_ESC,  KC_TAB,  KC_BSPC, MO(3),
         NN_LOCK, KC_EQL,  KC_PSLS, KC_PAST,
         KC_7,    KC_8,    KC_9,    KC_PMNS,
@@ -77,16 +77,16 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                  KC_0,   CUSTOM_DOT
     ),
 
-    [2] = LAYOUT_numpad_6x4(
-        KC_ESC,  KC_TAB,  KC_BSPC, MO(3),
-        NN_LOCK, KC_EQL,  KC_PSLS, KC_PAST,
-        KC_HOME, KC_UP,   KC_PGUP, KC_PMNS,
-        KC_LEFT, _______, KC_RGHT, KC_PPLS,
-        KC_END,  KC_DOWN, KC_PGDN, KC_PENT,
-                 KC_INS,  KC_DEL
+    [PAD_B_FN] = LAYOUT_numpad_6x4(
+        NK_TOGG, SW_SLEP, KEY_ECO, _______,
+        RGB_TOG, BLE_RES, KEY_RES, FACTORY,
+        RGB_HUI, RGB_VAI, RGB_MOD, RGB_SAI,
+        BT_2_4G, BT_USB,  RGB_SPI, _______,
+        BT_HOST1,BT_HOST2,BT_HOST3,_______,
+        SW_OS, RGB_TEST
     ),
 
-    [PAD_FN] = LAYOUT_numpad_6x4(
+    [PAD_A_FN] = LAYOUT_numpad_6x4(
         NK_TOGG, SW_SLEP, KEY_ECO, _______,
         RGB_TOG, BLE_RES, KEY_RES, FACTORY,
         RGB_HUI, RGB_VAI, RGB_MOD, RGB_SAI,
@@ -342,10 +342,10 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     if (!per_info.eco_tog_flag) {
         uint8_t current_layer = get_highest_layer(default_layer_state | layer_state);
 
-        if (current_layer == 0) {
+        if (current_layer == 0 || current_layer == 2) {
             // PAD_B 层：显示系统 NumLock 状态
             should_show_numlock = (host_keyboard_led_state().num_lock && (bts_info.bt_info.paired || dev_info.devs == DEVS_USB));
-        } else if (current_layer == 1) {
+        } else if (current_layer == 1 || current_layer == 3) {
             // 自定义数字层：显示自定义 NumLock 状态
             should_show_numlock = custom_numlock_state;
         }
