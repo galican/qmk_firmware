@@ -294,21 +294,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         }
             return false;
 
-        case TO(2): {
-            if (record->event.pressed) {
-                dev_info.rsync_flag = true;
-                eeconfig_update_user(dev_info.raw);
-            }
-            break;
-        }
-        case TO(1): {
-            if (record->event.pressed) {
-                dev_info.rsync_flag = false;
-                eeconfig_update_user(dev_info.raw);
-            }
-            break;
-        }
-
         case CUSTOM_DOT:
             if (record->event.pressed) {
                 send_string("."); // 直接发送点号字符

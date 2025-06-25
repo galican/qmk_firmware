@@ -34,7 +34,6 @@ typedef union {
     struct {
         uint8_t devs;
         uint8_t last_devs;
-        bool rsync_flag;
         uint8_t custom_numlock : 1; // 新增：自定义 NumLock 状态
     };
 } dev_info_t;
