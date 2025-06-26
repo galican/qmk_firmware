@@ -34,6 +34,10 @@ typedef union {
     struct {
         uint8_t devs;
         uint8_t last_devs;
+        uint8_t after_sw_last_devs;
+        bool    sleep_mode_enabled : 1; // 是否启用睡眠模式
+        uint8_t bled_mode : 3;          // 灯效模式（BLED_MODE_ON等，2位足够）
+        uint8_t bled_color : 4;         // 颜色枚举（最多16种颜色，4位足够）
     };
 } dev_info_t;
 

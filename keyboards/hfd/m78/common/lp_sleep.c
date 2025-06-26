@@ -178,9 +178,9 @@ static void exti_init(void) {
             }
         }
   } else {
-    setPinInputHigh(BT_CABLE_PIN);
-    _pal_lld_enablepadevent(PAL_PORT(BT_CABLE_PIN), PAL_PAD(BT_CABLE_PIN), PAL_EVENT_MODE_BOTH_EDGES);
-    switch (PAL_PAD(BT_CABLE_PIN)) {
+    setPinInputHigh(CABLE_PLUG_PIN);
+    _pal_lld_enablepadevent(PAL_PORT(CABLE_PLUG_PIN), PAL_PAD(CABLE_PLUG_PIN), PAL_EVENT_MODE_BOTH_EDGES);
+    switch (PAL_PAD(CABLE_PLUG_PIN)) {
         case 0:
             nvicEnableVector(EXTI0_IRQn, WB32_IRQ_EXTI0_PRIORITY);
             break;
@@ -212,7 +212,6 @@ static void exti_init(void) {
             nvicEnableVector(EXTI15_10_IRQn, WB32_IRQ_EXTI10_15_PRIORITY);
             break;
     }
-
   }
 }
 

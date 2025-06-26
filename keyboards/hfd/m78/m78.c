@@ -3,6 +3,7 @@
 
 #include QMK_KEYBOARD_H
 #include "common/bt_task.h"
+#include "bled/bled.h"
 
 bool led_inited = false;
 
@@ -51,6 +52,26 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
         return false;
     }
 
+    switch (keycode) {
+        case QK_RGB_MATRIX_TOGGLE:
+            if (record->event.pressed) {
+                switch (rgb_matrix_get_flags()) {
+                    case LED_FLAG_ALL: {
+                        rgb_matrix_set_flags(LED_FLAG_NONE);
+                        rgb_matrix_set_color_all(0, 0, 0);
+                    } break;
+                    default: {
+                        rgb_matrix_set_flags(LED_FLAG_ALL);
+                    } break;
+                }
+            }
+            if (!rgb_matrix_is_enabled()) {
+                rgb_matrix_set_flags(LED_FLAG_ALL);
+                rgb_matrix_enable();
+            }
+            return false;
+    }
+
 #ifdef BT_MODE_ENABLE
     if (process_record_bt(keycode, record) != true) {
         return false;
@@ -78,6 +99,10 @@ void keyboard_post_init_kb(void) {
 }
 
 void eeconfig_init_kb(void) {
+    dev_info.after_sw_last_devs = DEVS_HOST1;
+    dev_info.sleep_mode_enabled = true; // 默认启用睡眠模式
+    eeconfig_update_user(dev_info.raw);
+
     eeconfig_init_user();
 }
 
@@ -85,6 +110,7 @@ void matrix_scan_kb(void) {
 #ifdef BT_MODE_ENABLE
     bt_task();
 #endif
+
     matrix_scan_user();
 }
 
@@ -97,9 +123,15 @@ void housekeeping_task_kb(void) {
 #ifdef CONSOLE_ENABLE
     debug_enable = true;
 #endif
+
+    housekeeping_task_user();
 }
 
 bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
+    if (rgb_matrix_get_flags()) {
+        bled_task();
+    }
+
     if (rgb_matrix_indicators_advanced_user(led_min, led_max) != true) {
         return false;
     }

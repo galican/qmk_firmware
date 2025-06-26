@@ -11,16 +11,27 @@
 #define BT_MODE_ENABLE
 #ifdef BT_MODE_ENABLE
 #    define NO_USB_STARTUP_CHECK
-#    define ENTRY_STOP_MODE  // 超时进入STOP Mode
-#    define BT_CABLE_PIN B9  //
-#    define BT_CHARGE_PIN B8 // 充电时为低，充满时为高
+#    define ENTRY_STOP_MODE // 超时进入STOP Mode
+
+// Charge state detect
+#    define CABLE_PLUG_PIN B9   // USB线接入时为低，拔出时为高
+#    define CHARGE_STATE_PIN B8 // 充电时为低，充满时为高
+
+// WL indicate LED setting
 #    define BT_HOST1_INDEX 26
 #    define BT_HOST2_INDEX 25
 #    define BT_HOST3_INDEX 24
-#    define BT_2_4G_INDEX 23
-#    define BT_USB_INDEX 22
-#    define BT_MODE_SW_PIN B11
+#    define RF_INDEX 23
+#    define USB_INDEX 22
+
+// USB/BT/RF Mode Switch
+#    define BT_MODE_SW_PIN C0
+#    define RF_MODE_SW_PIN B11
 #endif
+
+/* indicator config */
+#define CAPS_LOCK_LED_INDEX 58
+#define GUI_LOCK_LED_INDEX 80
 
 /* RGB Matrix */
 #define WS2812_EN_PIN D2

@@ -1,7 +1,7 @@
 {
-    "name": "Alchemie TKL",
+    "name": "YIGIIX GK81",
     "vendorId": "0xFFFE",
-    "productId": "0x00AC",
+    "productId": "0x00B0",
     "keycodes": ["qmk_lighting"],
     "menus": [
       {
@@ -23,23 +23,24 @@
                 "options": [
                     ["All Off", 0],
                     ["SOLID_COLOR", 1],
-                    ["BREATHING", 2],
-                    ["CYCLE_ALL", 3],
-                    ["CYCLE_LEFT_RIGHT", 4],
-                    ["CYCLE_UP_DOWN", 5],
-                    ["RAINBOW_MOVING_CHEVRON", 6],
-                    ["CYCLE_OUT_IN", 7],
-                    ["CYCLE_OUT_IN_DUAL", 8],
-                    ["CYCLE_PINWHEEL", 9],
-                    ["CYCKE_SPIRAL", 10],
+                    ["GRADIENT_UP_DOWN", 2],
+                    ["BAND_PINWHEEL_SAT", 3],
+                    ["BAND_SPIRAL_SAT", 4],
+                    ["CYCLE_ALL", 5],
+                    ["CYCLE_LEFT_RIGHT", 6],
+                    ["RAINBOW_MOVING_CHEVRON", 7],
+                    ["CYCLE_OUT_IN", 8],
+                    ["CYCLE_OUT_IN_DUAL", 9],
+                    ["CYCLE_PINWHEEL", 10],
                     ["DUAL_BEACON", 11],
-                    ["RAINBOW_BEACON", 12],
-                    ["RAINDROPS", 13],
+                    ["RAINBOW_PINWHEELS", 12],
+                    ["HUE_WAVE", 13],
                     ["TYPING_HEATMAP", 14],
                     ["SOLID_REACTIVE_SIMPLE", 15],
-                    ["SOLID_REACTIVE", 16],
-                    ["MATRIX_MULTISPLASH", 17]
-
+                    ["SOLID_REACTIVE_WIDE", 16],
+                    ["SOLID_REACTIVE_CROSS", 17],
+                    ["SOLID_REACTIVE_NEXUS", 18],
+                    ["MATRIX_MULTISPLASH", 19]
                 ]
               },
               {
@@ -60,7 +61,7 @@
         ]
       }
     ],
-    "matrix": { "rows": 6, "cols": 18 },
+    "matrix": { "rows": 6, "cols": 16 },
     "customKeycodes":[
         {"name":"BT_HOST1","title":"BT_HOST1","shortName":"BT_HOST1"},
         {"name":"BT_HOST2","title":"BT_HOST2","shortName":"BT_HOST2"},
@@ -69,16 +70,8 @@
         {"name":"BT_USB","title":"BT_USB","shortName":"BT_USB"},
         {"name":"BT_VOL","title":"Query the voltage of battery","shortName":"BT_VOL"},
         {"name":"SW_OS","title":"Switch os between window and ios","shortName":"SW_OS"},
-        {"name":"INDICATOR_HUE","title":"Change the color of LED indicator","shortName":"IND_HUE"},
-        {"name":"INDICATOR_BRIGHTNESS","title":"Increase the brightness level of LED indicator","shortName":"IND_VAL"},
-        {"name":"ECO","title":"Toggle the ON/OFF state of LED indicator","shortName":"ECO"},
-        {"name":"FACTORY_RESET","title":"Reset the PCB setting","shortName":"FACTORY"},
-        {"name":"KEYBOARD_RESET","title":"Reset the keyboard resetting","shortName":"KBY_RES"},
-        {"name":"BLE_RESET","title":"Reset the Bluetooth setting","shortName":"BLE_RES"},
-        {"name":"FN_FUN","title":"Swap the function keys","shortName":"FN_FUN"},
-        {"name":"FN_MENU","title":"Swap the menu and alt","shortName":"FN_MENU"},
-        {"name":"SLEEP_TOGGLE","title":"Switch the sleep level","shortName":"SW_SELP"},
-        {"name":"WIN_LOCK","title":"WIN key lock","shortName":"WIN_LOCK"}
+        {"name":"SLEEP_TOGGLE","title":"Toggle the sleep status","shortName":"SW_SELP"},
+        {"name":"BLED_MODE_NEXT","title":"Switch the effect of back light","shortName":"BL_NEXT"}
     ],
     "layouts": {
       "keymap":[
@@ -88,33 +81,44 @@
           },
           "0,0",
           {
-            "x": 1,
-            "c": "#aaaaaa"
+            "x": 0.25,
+            "c": "#cccccc"
           },
+          "0,1",
           "0,2",
           "0,3",
           "0,4",
-          "0,5",
           {
-            "x": 0.5,
-            "c": "#cccccc"
+              "x": 0.25
           },
+          "0,5",
           "0,6",
           "0,7",
           "0,8",
-          "0,9",
           {
-            "x": 0.5,
-            "c": "#aaaaaa"
+              "x": 0.25
           },
+          "0,9",
           "0,10",
           "0,11",
           "0,12",
-          "0,13"
+          {
+            "x": 0.25
+          },
+          "0,14"
         ],
         [
           {
-            "y": 0.5,
+            "x": 15.75,
+            "y": -1,
+            "w": 2,
+            "h": 2
+          },
+          "0,15\n\n\n\n\n\n\n\n\ne0"
+        ],
+        [
+          {
+            "y": 0.25,
             "c": "#cccccc"
           },
           "1,0",
@@ -131,25 +135,18 @@
           "1,11",
           "1,12",
           {
-            "c": "#aaaaaa",
             "w": 2
           },
           "1,13",
          {
             "x": 0.25
-         },
-          "1,15",
-          "1,16",
-          "1,17"
+         }
         ],
         [
           {
             "w": 1.5
           },
           "2,0",
-          {
-            "c": "#cccccc"
-          },
           "2,1",
           "2,2",
           "2,3",
@@ -163,19 +160,18 @@
           "2,11",
           "2,12",
           {
-            "w": 1.5,
-            "c": "#aaaaaa"
+            "w": 1.5
           },
           "2,13",
           {
-            "x": 0.25
+            "x": 0.75
           },
-          "2,15",
-          "2,16",
-          "2,17"
+          "2,14",
+          "2,15"
         ],
         [
           {
+            "c": "#aaaaaa",
             "w": 1.75
           },
           "3,0",
@@ -197,7 +193,13 @@
             "c": "#777777",
             "w": 2.25
           },
-          "3,13"
+          "3,13",
+          {
+            "x": 0.75,
+            "c": "#cccccc"
+          },
+          "3,14",
+          "3,15"
         ],
         [
           {
@@ -208,7 +210,6 @@
           {
             "c": "#cccccc"
           },
-          "4,1",
           "4,2",
           "4,3",
           "4,4",
@@ -218,19 +219,22 @@
           "4,8",
           "4,9",
           "4,10",
+          "4,11",
           {
             "c": "#aaaaaa",
             "w": 2.75
           },
           "4,13",
           {
-            "x": 1.25,
+            "x": 0.25,
+            "y": 0.25,
             "c": "#777777"
           },
-          "4,16"
+          "4,14"
         ],
         [
           {
+            "y": -0.25,
             "c": "#aaaaaa",
             "w": 1.25
           },
@@ -247,31 +251,28 @@
             "c": "#cccccc",
             "w": 6.25
           },
-          "5,5",
+          "5,6",
           {
             "c": "#aaaaaa",
-            "w": 1.25
-          },
-          "5,9",
-          {
             "w": 1.25
           },
           "5,10",
           {
             "w": 1.25
           },
-          "5,12",
+          "5,11",
           {
             "w": 1.25
           },
-          "5,13",
+          "5,12",
           {
-            "x": 0.25,
+            "x": 0.5,
+            "y": 0.25,
             "c": "#777777"
           },
-          "5,15",
-          "5,16",
-          "5,17"
+          "5,13",
+          "5,14",
+          "5,15"
         ]
       ]
     }
