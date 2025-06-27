@@ -205,21 +205,13 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     }
 
     // Caps Lock 指示
-    if (host_keyboard_led_state().caps_lock && (bts_info.bt_info.paired || dev_info.devs == DEVS_USB)) {
-        RGB_MATRIX_INDICATOR_SET_COLOR(CAPS_LOCK_LED_INDEX, 100, 100, 100);
-    } else {
-        if (!rgb_matrix_get_flags()) {
-            RGB_MATRIX_INDICATOR_SET_COLOR(CAPS_LOCK_LED_INDEX, 0, 0, 0);
-        }
+    if (host_keyboard_led_state().caps_lock && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
+        rgb_matrix_set_color(CAPS_LOCK_LED_INDEX, 100, 100, 100);
     }
 
     // GUI Lock 指示
     if (keymap_config.no_gui && ((bts_info.bt_info.paired) || (dev_info.devs == DEVS_USB))) {
         rgb_matrix_set_color(GUI_LOCK_LED_INDEX, 100, 0, 0);
-    } else {
-        if (!rgb_matrix_get_flags()) {
-            RGB_MATRIX_INDICATOR_SET_COLOR(GUI_LOCK_LED_INDEX, 0, 0, 0);
-        }
     }
 
     return true;

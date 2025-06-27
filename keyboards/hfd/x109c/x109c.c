@@ -134,7 +134,7 @@ void set_led_state(void) {
         }
     }
     static uint16_t power_update_time;
-    if (!get_kb_sleep_flag() && bts_info.bt_info.paired && timer_elapsed(power_update_time) >= 4000) {
+    if (!get_kb_sleep_flag() && timer_elapsed(power_update_time) >= 4000) {
         power_update_time = timer_read();
         bts_send_vendor(v_query_vol);
         LCD_IND_update();

@@ -204,6 +204,7 @@ void bt_init(void) {
 
     bt_init_time = timer_read32();
     chThdCreateStatic(waThread1, sizeof(waThread1), HIGHPRIO, Thread1, NULL);
+    bt_scan_mode();
 
     if (dev_info.devs != DEVS_USB) {
         usbDisconnectBus(&USB_DRIVER);
@@ -585,6 +586,15 @@ static void bt_scan_mode(void) {
         }
         if (dev_info.devs != DEVS_USB) bt_switch_mode(dev_info.devs, DEVS_USB, false); // usb mode
     }
+    // if (readPin(BT_MODE_SW_PIN) && !readPin(RF_MODE_SW_PIN)) {
+    //     if (dev_info.devs != DEVS_2_4G) bt_switch_mode(dev_info.devs, DEVS_2_4G, false); // 2_4G mode
+    // }
+    // if (readPin(RF_MODE_SW_PIN) && !readPin(BT_MODE_SW_PIN)) {
+    //     if ((dev_info.devs == DEVS_USB) || (dev_info.devs == DEVS_2_4G)) bt_switch_mode(dev_info.devs, dev_info.last_devs, false); // BT mode
+    // }
+    // if (readPin(BT_MODE_SW_PIN) && readPin(RF_MODE_SW_PIN)) {
+    //     if (dev_info.devs != DEVS_USB) bt_switch_mode(dev_info.devs, DEVS_USB, false); // usb mode
+    // }
 #endif
 
 #ifdef FORCE_USB
@@ -780,12 +790,8 @@ static void handle_bt_indicate_led(void) {
         } break;
     }
 
-    if (indicator_status != INDICATOR_OFF) {
+    if (indicator_status) {
         rgb_matrix_set_color(rgb_index, rgb.r, rgb.g, rgb.b);
-    } else {
-        if (!rgb_matrix_get_flags()) {
-            rgb_matrix_set_color(rgb_index, 0, 0, 0);
-        }
     }
 }
 
@@ -805,19 +811,11 @@ static void handle_usb_indicate_led(void) {
             } else {
                 rgb_matrix_set_color(rgb_index_table[DEVS_USB], 0, 0, 0);
             }
-        } else {
-            if (!rgb_matrix_get_flags()) {
-                rgb_matrix_set_color(rgb_index_table[DEVS_USB], 0, 0, 0);
-            }
         }
         USB_switch_time = timer_read32();
     } else {
         if (timer_elapsed32(USB_switch_time) < USB_CONNECTED_LAST_MS) {
             rgb_matrix_set_color(rgb_index_table[DEVS_USB], 100, 100, 100);
-        } else {
-            if (!rgb_matrix_get_flags()) {
-                rgb_matrix_set_color(rgb_index_table[DEVS_USB], 0, 0, 0);
-            }
         }
     }
 }
@@ -905,10 +903,6 @@ static void handle_charging_indication(void) {
                 charging_time = timer_read32();
             }
         }
-    } else {
-        if (!rgb_matrix_get_flags()) {
-            rgb_matrix_set_color(0, 0, 0, 0);
-        }
     }
 }
 
@@ -954,11 +948,6 @@ static void handle_battery_query_display(void) {
     } else {
         if (query_vol_processing) {
             query_vol_processing = false;
-            if (!rgb_matrix_get_flags()) {
-                for (uint8_t i = 0; i < led_count; i++) {
-                    rgb_matrix_set_color(query_index[i], 0, 0, 0);
-                }
-            }
         }
     }
 }

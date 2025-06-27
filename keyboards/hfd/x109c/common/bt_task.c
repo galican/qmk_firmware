@@ -1193,7 +1193,7 @@ static void bt_used_pin_init(void) {
 
 #if defined(BT_CABLE_PIN) && defined(BT_CHARGE_PIN)
     setPinInputHigh(BT_CABLE_PIN);
-    setPinInput(BT_CHARGE_PIN);
+    setPinInputHigh(BT_CHARGE_PIN);
 #endif
 }
 
@@ -1241,7 +1241,7 @@ static void close_rgb(void) {
         return;
     }
     /*************************************************************************************/
-    if (timer_elapsed32(pressed_time) >= ((5 * 60 - 12) * 1000)) { // 超时，关闭灯光
+    if (timer_elapsed32(pressed_time) >= ((7 * 60 + 30) * 1000)) { // 超时，关闭灯光
         rgb_matrix_disable_noeeprom();
         LCD_command_update(LCD_SLEEP);
         extern bool LCD_DONT_SEND;
@@ -1505,7 +1505,7 @@ uint8_t bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
             }
         }
         extern bool low_vol_offed_sleep;
-        if (bts_info.bt_info.low_vol_offed) {
+        if (bts_info.bt_info.low_vol_offed && readPin(BT_CABLE_PIN)) {
             kb_sleep_flag       = true;
             low_vol_offed_sleep = true;
         }
