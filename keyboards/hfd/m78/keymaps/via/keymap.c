@@ -174,9 +174,9 @@ static void factory_reset(void) {
 
     // 重置状态指示器
     extern uint32_t last_total_time;
-    extern uint8_t  indicator_status;
+    extern indicator_state_t indicator_status;
     last_total_time  = timer_read32();
-    indicator_status = 2;
+    indicator_status = INDICATOR_CONNECTING;
 
 #ifdef RGB_MATRIX_ENABLE
     // 重新初始化 RGB

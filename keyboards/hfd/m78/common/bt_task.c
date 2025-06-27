@@ -48,25 +48,35 @@ static void open_rgb(void);
 static void close_rgb(void);
 #endif
 
+// Helper functions for better code organization
+static bool    is_bt_device(uint8_t device);
+static bool    validate_device_type(uint8_t device);
+static void    reset_bt_connection_state(void);
+static void    send_device_vendor_command(uint8_t device);
+static uint8_t keycode_to_device_type(uint16_t keycode);
+
 extern keymap_config_t keymap_config;
 
 // ===========================================
 // 常量定义
 // ===========================================
-/* wl indicate timer setting */
-#define WL_CONN_TIMEOUT_MS ((30 - 4) * 1000)
-#define WL_PAIR_TIMEOUT_MS ((1 * 60 - 7) * 1000)
-#define WL_PAIR_INTVL_MS (200)
-#define WL_CONN_INTVL_MS (500)
-#define WL_CONNECTED_LAST_MS (3 * 1000)
-#define USB_CONN_BLINK_COUNT 60
+/* Wireless connection timing constants */
+#define WL_CONN_TIMEOUT_MS ((30 - 4) * 1000)     // 26 seconds
+#define WL_PAIR_TIMEOUT_MS ((1 * 60 - 7) * 1000) // 53 seconds
+#define WL_PAIR_INTVL_MS (200)                   // 5Hz blink for pairing
+#define WL_CONN_INTVL_MS (500)                   // 2Hz blink for connecting
+#define WL_CONNECTED_LAST_MS (3 * 1000)          // Show connected status for 3s
 #define USB_CONNECTED_LAST_MS (3 * 1000)
 
-/* long pressed key number setting */
+/* Sleep and standby timeouts */
+#define LED_OFF_STANDBY_TIMEOUT_MS (5 * 60 * 1000) // 5 minutes
+
+/* Array size calculations */
 #define NUM_LONG_PRESS_KEYS (sizeof(long_pressed_keys) / sizeof(long_pressed_keys_t))
 
-/* led off standby timeout */
-#define led_off_standby_timeout (5 * 60 * 1000)
+/* Hardware validation helpers */
+#define IS_BT_DEVICE(dev) ((dev) >= DEVS_HOST1 && (dev) <= DEVS_HOST3)
+#define IS_VALID_DEVICE(dev) ((dev) >= DEVS_USB && (dev) <= DEVS_2_4G)
 
 // ===========================================
 // 结构体定义
@@ -104,9 +114,8 @@ long_pressed_keys_t long_pressed_keys[] = {
 };
 // clang-format on
 // 指示器状态
-uint8_t indicator_status          = 2;
-uint8_t indicator_reset_last_time = false;
-uint8_t layer_save;
+indicator_state_t indicator_status          = INDICATOR_CONNECTING;
+bool              indicator_reset_last_time = false;
 
 // RGB控制
 static uint32_t key_press_time;
@@ -217,34 +226,26 @@ void bt_init(void) {
 void bt_task(void) {
     static uint32_t last_time = 0;
 
-    if ((bt_init_time != 0) && (timer_elapsed32(bt_init_time) >= 2000)) {
+    // Handle initialization sequence after delay
+    if ((bt_init_time != 0) && (timer_elapsed32(bt_init_time) >= BT_INIT_DELAY_MS)) {
         bt_init_time = 0;
 
         bts_send_name(DEVS_HOST1);
         bts_send_vendor(v_en_sleep_bt);
         bts_send_vendor(v_en_sleep_wl);
-        switch (dev_info.devs) {
-            case DEVS_HOST1:
-                bts_send_vendor(v_host1);
-                break;
-            case DEVS_HOST2:
-                bts_send_vendor(v_host2);
-                break;
-            case DEVS_HOST3:
-                bts_send_vendor(v_host3);
-                break;
-            case DEVS_2_4G:
-                bts_send_vendor(v_2_4g);
-                break;
-            default:
-                bts_send_vendor(v_usb);
-                dev_info.devs = DEVS_USB;
-                eeconfig_update_user(dev_info.raw);
-                break;
+
+        // Send appropriate vendor command for current device
+        send_device_vendor_command(dev_info.devs);
+
+        // Fallback to USB if invalid device
+        if (!validate_device_type(dev_info.devs)) {
+            dev_info.devs = DEVS_USB;
+            eeconfig_update_user(dev_info.raw);
         }
     }
 
-    if (timer_elapsed32(last_time) >= 1) {
+    // Update task at regular intervals
+    if (timer_elapsed32(last_time) >= TASK_UPDATE_INTERVAL_MS) {
         last_time = timer_read32();
 
         if (dev_info.devs != DEVS_USB) {
@@ -341,18 +342,18 @@ bool process_record_bt(uint16_t keycode, keyrecord_t *record) {
 // 设备切换函数
 // ===========================================
 void bt_switch_mode(uint8_t last_mode, uint8_t now_mode, uint8_t reset) {
-    if (!rgb_matrix_config.enable) {
-        if (rgb_status_save) {
-            rgb_matrix_enable_noeeprom();
-        }
+    // Validate device types
+    if (!validate_device_type(last_mode) || !validate_device_type(now_mode)) {
+        return;
     }
 
+    // Enable RGB if it was previously enabled
+    if (!rgb_matrix_config.enable && rgb_status_save) {
+        rgb_matrix_enable_noeeprom();
+    }
+
+    // Handle USB driver state changes
     bool usb_sws = !!last_mode ? !now_mode : !!now_mode;
-
-    extern uint8_t  indicator_status;
-    extern uint8_t  indicator_reset_last_time;
-    extern uint32_t last_total_time;
-
     if (usb_sws) {
         if (!!now_mode) {
             usbDisconnectBus(&USB_DRIVER);
@@ -362,59 +363,47 @@ void bt_switch_mode(uint8_t last_mode, uint8_t now_mode, uint8_t reset) {
         }
     }
 
-    // reset wl indicate timer
+    // Reset wireless indicator timer if switching between different devices
     if (dev_info.devs != dev_info.last_devs) {
+        extern uint32_t last_total_time;
         last_total_time = timer_read32();
     }
 
+    // Update device state
     dev_info.devs = now_mode;
     if (dev_info.devs != DEVS_USB) {
         dev_info.last_devs = dev_info.devs;
-    } else if (dev_info.devs == DEVS_USB) {
+    } else {
         USB_switch_time = timer_read32();
         USB_blink_cnt   = 0;
     }
 
+    // Set hardware control pin
     if (dev_info.devs == DEVS_USB) {
         writePinLow(A14);
     } else {
         writePinHigh(A14);
     }
 
-    // 重置蓝牙状态
-    bts_info.bt_info.pairing        = false;
-    bts_info.bt_info.paired         = false;
-    bts_info.bt_info.come_back      = false;
-    bts_info.bt_info.come_back_err  = false;
-    bts_info.bt_info.mode_switched  = false;
-    bts_info.bt_info.indictor_rgb_s = 0;
-
+    // Reset BT connection state
+    reset_bt_connection_state();
     eeconfig_update_user(dev_info.raw);
 
-    // 发送相应的蓝牙命令
-    switch (dev_info.devs) {
-        case DEVS_HOST1:
-        case DEVS_HOST2:
-        case DEVS_HOST3:
-        case DEVS_2_4G:
-            if (reset != false) {
-                indicator_status          = 1;
-                indicator_reset_last_time = true;
-                bts_send_vendor(v_pair);
-            } else {
-                indicator_status          = 2;
-                indicator_reset_last_time = true;
-                uint8_t vendor_cmds[]     = {v_host1, v_host2, v_host3, v_2_4g};
-                bts_send_vendor(vendor_cmds[dev_info.devs - 1]);
-            }
-            break;
-        case DEVS_USB:
-            indicator_status          = 2;
+    // Handle indicator status and send vendor commands
+    if (is_bt_device(dev_info.devs) || dev_info.devs == DEVS_2_4G) {
+        if (reset) {
+            indicator_status          = INDICATOR_PAIRING; // Pairing mode
             indicator_reset_last_time = true;
-            bts_send_vendor(v_usb);
-            break;
-        default:
-            break;
+            bts_send_vendor(v_pair);
+        } else {
+            indicator_status          = INDICATOR_CONNECTED; // Connecting mode
+            indicator_reset_last_time = true;
+            send_device_vendor_command(dev_info.devs);
+        }
+    } else if (dev_info.devs == DEVS_USB) {
+        indicator_status          = INDICATOR_CONNECTED;
+        indicator_reset_last_time = true;
+        bts_send_vendor(v_usb);
     }
 }
 
@@ -445,7 +434,7 @@ static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
             return false;
         }
     }
-    if (!readPin(RF_MODE_SW_PIN) || !readPin(RF_MODE_SW_PIN)) {
+    if (!readPin(BT_MODE_SW_PIN) || !readPin(RF_MODE_SW_PIN)) {
         if (keycode == BT_USB) {
             return false;
         }
@@ -458,7 +447,7 @@ static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
         case BT_2_4G:
         case BT_USB: {
             if (record->event.pressed) {
-                uint8_t target_devs = (keycode == BT_HOST1) ? DEVS_HOST1 : (keycode == BT_HOST2) ? DEVS_HOST2 : (keycode == BT_HOST3) ? DEVS_HOST3 : (keycode == BT_2_4G) ? DEVS_2_4G : DEVS_USB;
+                uint8_t target_devs = keycode_to_device_type(keycode);
                 if (dev_info.devs != target_devs) {
                     bt_switch_mode(dev_info.devs, target_devs, false);
                 }
@@ -558,7 +547,7 @@ static void long_pressed_keys_cb(uint16_t keycode) {
 
 static void long_pressed_keys_hook(void) {
     for (uint8_t i = 0; i < NUM_LONG_PRESS_KEYS; i++) {
-        if ((long_pressed_keys[i].press_time != 0) && (timer_elapsed32(long_pressed_keys[i].press_time) >= (3 * 1000))) {
+        if ((long_pressed_keys[i].press_time != 0) && (timer_elapsed32(long_pressed_keys[i].press_time) >= LONG_PRESS_DURATION_MS)) {
             long_pressed_keys[i].event_cb(long_pressed_keys[i].keycode);
             long_pressed_keys[i].press_time = 0;
         }
@@ -586,7 +575,7 @@ static void bt_scan_mode(void) {
         if (dev_info.devs != DEVS_2_4G) bt_switch_mode(dev_info.devs, DEVS_2_4G, false); // 2_4G mode
     }
     if (!readPin(BT_MODE_SW_PIN) && readPin(RF_MODE_SW_PIN)) {
-        if (dev_info.last_devs != DEVS_HOST1 || dev_info.last_devs != DEVS_HOST2 || dev_info.last_devs != DEVS_HOST3) dev_info.last_devs = dev_info.after_sw_last_devs;
+        if (dev_info.last_devs != DEVS_HOST1 && dev_info.last_devs != DEVS_HOST2 && dev_info.last_devs != DEVS_HOST3) dev_info.last_devs = dev_info.after_sw_last_devs;
         if ((dev_info.devs == DEVS_USB) || (dev_info.devs == DEVS_2_4G)) bt_switch_mode(dev_info.devs, dev_info.last_devs, false); // BT mode
     }
     if (readPin(BT_MODE_SW_PIN) && readPin(RF_MODE_SW_PIN)) {
@@ -626,7 +615,7 @@ static void update_low_voltage_state(void) {}
 // RGB关闭函数
 // ===========================================
 static void led_off_standby(void) {
-    if (timer_elapsed32(key_press_time) >= led_off_standby_timeout) {
+    if (timer_elapsed32(key_press_time) >= LED_OFF_STANDBY_TIMEOUT_MS) {
         rgb_matrix_disable_noeeprom();
     } else {
         rgb_status_save = rgb_matrix_config.enable;
@@ -707,7 +696,7 @@ static void handle_bt_indicate_led(void) {
     }
 
     switch (indicator_status) {
-        case 1: { // 闪烁模式 5Hz 重置
+        case INDICATOR_PAIRING: { // 闪烁模式 5Hz 重置
             if ((last_time == 0) || (timer_elapsed32(last_time) >= WL_PAIR_INTVL_MS)) {
                 last_time = timer_read32();
                 rgb_flip  = !rgb_flip;
@@ -722,17 +711,17 @@ static void handle_bt_indicate_led(void) {
 
             if (bts_info.bt_info.paired) {
                 last_long_time   = timer_read32();
-                indicator_status = 3;
+                indicator_status = INDICATOR_CONNECTED;
                 break;
             }
 
             if (timer_elapsed32(last_total_time) >= WL_PAIR_TIMEOUT_MS) {
-                indicator_status = 0;
+                indicator_status = INDICATOR_OFF;
                 kb_sleep_flag    = true;
             }
         } break;
 
-        case 2: { // 闪烁模式 2Hz 回连
+        case INDICATOR_CONNECTING: { // 闪烁模式 2Hz 回连
             if ((last_time == 0) || (timer_elapsed32(last_time) >= WL_CONN_INTVL_MS)) {
                 last_time = timer_read32();
                 rgb_flip  = !rgb_flip;
@@ -747,27 +736,27 @@ static void handle_bt_indicate_led(void) {
 
             if (bts_info.bt_info.paired) {
                 last_long_time   = timer_read32();
-                indicator_status = 3;
+                indicator_status = INDICATOR_CONNECTED;
                 break;
             }
 
             if (timer_elapsed32(last_total_time) >= WL_CONN_TIMEOUT_MS) {
-                indicator_status = 0;
+                indicator_status = INDICATOR_OFF;
                 kb_sleep_flag    = true;
             }
         } break;
 
-        case 3: { // 长亮模式
+        case INDICATOR_CONNECTED: { // 长亮模式
             if ((timer_elapsed32(last_long_time) < WL_CONNECTED_LAST_MS)) {
                 rgb.r = rgb_index_color_table[dev_info.devs][0];
                 rgb.g = rgb_index_color_table[dev_info.devs][1];
                 rgb.b = rgb_index_color_table[dev_info.devs][2];
             } else {
-                indicator_status = 0;
+                indicator_status = INDICATOR_OFF;
             }
         } break;
 
-        case 4: { // 长灭模式
+        case INDICATOR_DISABLED: { // 长灭模式
             rgb = (RGB){.r = 0, .g = 0, .b = 0};
         } break;
 
@@ -776,10 +765,10 @@ static void handle_bt_indicate_led(void) {
             if (!kb_sleep_flag) {
                 if (!bts_info.bt_info.paired) {
                     if (!bts_info.bt_info.pairing) {
-                        indicator_status = 2;
+                        indicator_status = INDICATOR_CONNECTING;
                         break;
                     }
-                    indicator_status = 2;
+                    indicator_status = INDICATOR_CONNECTING;
                     if ((dev_info.devs != DEVS_USB) && (dev_info.devs != DEVS_2_4G)) {
                         bt_switch_mode(DEVS_USB, dev_info.last_devs, false);
                     }
@@ -791,7 +780,7 @@ static void handle_bt_indicate_led(void) {
         } break;
     }
 
-    if (indicator_status) {
+    if (indicator_status != INDICATOR_OFF) {
         rgb_matrix_set_color(rgb_index, rgb.r, rgb.g, rgb.b);
     } else {
         if (!rgb_matrix_get_flags()) {
@@ -801,15 +790,15 @@ static void handle_bt_indicate_led(void) {
 }
 
 static void handle_usb_indicate_led(void) {
-    static uint16_t USB_blink_time;
+    static uint32_t USB_blink_time;
     static bool     USB_blink;
 
     if ((USB_DRIVER.state != USB_ACTIVE)) {
         if (USB_blink_cnt <= USB_CONN_BLINK_COUNT) {
-            if (timer_elapsed(USB_blink_time) >= 500) {
+            if (timer_elapsed32(USB_blink_time) >= 500) {
                 USB_blink_cnt++;
                 USB_blink      = !USB_blink;
-                USB_blink_time = timer_read();
+                USB_blink_time = timer_read32();
             }
             if (USB_blink) {
                 rgb_matrix_set_color(rgb_index_table[DEVS_USB], 100, 100, 100);
@@ -873,13 +862,14 @@ static void handle_layer_indication(void) {
     //     rgb_matrix_set_color(rgb_index_table[dev_info.devs], RGB_BLUE);
     // }
 }
+
 static void handle_low_battery_warning(void) {
     static bool     Low_power_bink = false;
     static uint32_t Low_power_time = 0;
 
     if (bts_info.bt_info.pvol <= 20) {
         rgb_matrix_set_color_all(0, 0, 0);
-        if (timer_elapsed(Low_power_time) >= 500) {
+        if (timer_elapsed32(Low_power_time) >= 500) {
             Low_power_bink = !Low_power_bink;
             Low_power_time = timer_read32();
         }
@@ -1028,4 +1018,63 @@ bool bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
     }
 
     return true;
+}
+
+// ===========================================
+// Helper Functions
+// ===========================================
+static bool is_bt_device(uint8_t device) {
+    return (device >= DEVS_HOST1 && device <= DEVS_HOST3);
+}
+
+static bool validate_device_type(uint8_t device) {
+    return (device >= DEVS_USB && device <= DEVS_2_4G);
+}
+
+static void reset_bt_connection_state(void) {
+    bts_info.bt_info.pairing        = false;
+    bts_info.bt_info.paired         = false;
+    bts_info.bt_info.come_back      = false;
+    bts_info.bt_info.come_back_err  = false;
+    bts_info.bt_info.mode_switched  = false;
+    bts_info.bt_info.indictor_rgb_s = 0;
+}
+
+static void send_device_vendor_command(uint8_t device) {
+    static const uint8_t vendor_cmds[] = {v_host1, v_host2, v_host3, v_2_4g};
+
+    if (!validate_device_type(device)) {
+        return;
+    }
+
+    switch (device) {
+        case DEVS_HOST1:
+        case DEVS_HOST2:
+        case DEVS_HOST3:
+        case DEVS_2_4G:
+            bts_send_vendor(vendor_cmds[device - 1]);
+            break;
+        case DEVS_USB:
+            bts_send_vendor(v_usb);
+            break;
+        default:
+            break;
+    }
+}
+
+static uint8_t keycode_to_device_type(uint16_t keycode) {
+    switch (keycode) {
+        case BT_HOST1:
+            return DEVS_HOST1;
+        case BT_HOST2:
+            return DEVS_HOST2;
+        case BT_HOST3:
+            return DEVS_HOST3;
+        case BT_2_4G:
+            return DEVS_2_4G;
+        case BT_USB:
+            return DEVS_USB;
+        default:
+            return DEVS_USB;
+    }
 }

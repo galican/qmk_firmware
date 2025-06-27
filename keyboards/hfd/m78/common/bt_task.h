@@ -26,8 +26,41 @@
 #include "keycode_config.h" // #define BT_DEBUG_MODE
 
 // #define BT_DEBUG_MODE
+
+// ===========================================
+// Timing Constants
+// ===========================================
 #define ENTRY_STOP_TIMEOUT 100 // ms
 // #define ENTRY_STOP_TIMEOUT (30 * 60000) // ms
+
+#define LONG_PRESS_DURATION_MS (3 * 1000)
+#define BT_INIT_DELAY_MS 2000
+#define TASK_UPDATE_INTERVAL_MS 1
+#define BLINK_INTERVAL_MS 500
+#define CHARGING_DISPLAY_DURATION_MS 2000
+#define BATTERY_QUERY_INTERVAL_MS 10000
+#define RGB_TEST_CYCLE_DURATION_MS 1000
+
+// ===========================================
+// Hardware Constants
+// ===========================================
+#define LOW_BATTERY_THRESHOLD 20
+#define BATTERY_LED_COUNT 10
+#define RGB_TEST_COLOR_COUNT 4
+#define USB_CONN_BLINK_COUNT 60
+
+// ===========================================
+// Device Type Enums
+// ===========================================
+typedef enum {
+    INDICATOR_OFF        = 0,
+    INDICATOR_PAIRING    = 1,
+    INDICATOR_CONNECTING = 2,
+    INDICATOR_CONNECTED  = 3,
+    INDICATOR_DISABLED   = 4,
+} indicator_state_t;
+
+extern indicator_state_t indicator_status;
 
 typedef union {
     uint32_t raw;
