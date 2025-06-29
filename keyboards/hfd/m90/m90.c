@@ -3,6 +3,7 @@
 
 #include QMK_KEYBOARD_H
 #include "common/bt_task.h"
+#include "usb_main.h"
 
 // clang-format off
 #ifdef RGB_MATRIX_ENABLE
@@ -112,10 +113,95 @@ const is31fl3733_led_t PROGMEM g_is31fl3733_leds[RGB_MATRIX_LED_COUNT] = {
 
 bool led_inited = false;
 
-#define HUE_SET_NUM (9 - 1)
-const uint8_t HUE_SET_TABLE[][3] = {
-    {HSV_MAGENTA}, {HSV_RED}, {HSV_ORANGE}, {HSV_YELLOW}, {HSV_GREEN}, {HSV_CYAN}, {HSV_BLUE}, {HSV_PURPLE}, {HSV_WHITE},
-};
+// ====================
+// 调试信息控制宏
+// ====================
+#ifdef CONSOLE_ENABLE
+#    define DEBUG_PRINTF(fmt, ...) uprintf(fmt, ##__VA_ARGS__)
+#else
+#    define DEBUG_PRINTF(fmt, ...) \
+        do {                       \
+        } while (0)
+#endif
+
+#ifdef CONSOLE_ENABLE
+void debug_per_info_current(void) {
+    uprintf("=== Current per_info State ===\n");
+    uprintf("per_info.raw: 0x%08lX\n", per_info.raw);
+    uprintf("eco_tog_flag = %d\n", per_info.eco_tog_flag);
+    uprintf("sleep_mode = %d\n", per_info.sleep_mode);
+    uprintf("ind_brightness = %d\n", per_info.ind_brightness);
+    uprintf("ind_color_index = %d\n", per_info.ind_color_index);
+    uprintf("smd_color_index = %d\n", per_info.smd_color_index);
+    uprintf("backlight_off = %d\n", per_info.backlight_off);
+    uprintf("saved_rgb_mode = %d\n", per_info.saved_rgb_mode);
+
+    // 检查EEPROM中的实际值
+    per_info_t eeprom_data;
+    eeprom_data.raw = eeconfig_read_kb();
+    uprintf("EEPROM backlight_off = %d\n", eeprom_data.backlight_off);
+    uprintf("EEPROM raw: 0x%08lX\n", eeprom_data.raw);
+    uprintf("=== Current State End ===\n");
+}
+
+void debug_dev_info_layout(void) {
+    // uprintf("=== dev_info_t Debug Layout ===\n");
+    // uprintf("Structure size: %d bytes\n", sizeof(dev_info_t));
+    // uprintf("Field ranges: devs(0-255), last_devs(0-255)\n");
+
+    // dev_info_t test = {0};
+    // uprintf("Initial raw: 0x%08lX\n", test.raw);
+
+    // test.devs = 1;
+    // uprintf("devs=1: 0x%08lX\n", test.raw);
+
+    // test.last_devs = 2;
+    // uprintf("last_devs=2: 0x%08lX\n", test.raw);
+
+    // test.devs      = 255;
+    // test.last_devs = 255;
+    // uprintf("devs=255, last_devs=255: 0x%08lX\n", test.raw);
+
+    // // 验证读取
+    // uprintf("=== Field Verification ===\n");
+    // uprintf("  devs=%d (expect 255)\n", test.devs);
+    // uprintf("  last_devs=%d (expect 255)\n", test.last_devs);
+    // uprintf("=== dev_info Layout End ===\n");
+}
+
+void debug_dev_info_current(void) {
+    uprintf("=== Current dev_info State ===\n");
+    uprintf("dev_info.raw: 0x%08lX\n", dev_info.raw);
+    uprintf("devs = %d\n", dev_info.devs);
+    uprintf("last_devs = %d\n", dev_info.last_devs);
+
+    // 显示设备类型含义
+    const char *dev_names[] = {"USB", "HOST1", "HOST2", "HOST3", "2.4G"};
+    if (dev_info.devs < 5) {
+        uprintf("devs = %s\n", dev_names[dev_info.devs]);
+    } else {
+        uprintf("devs = UNKNOWN(%d)\n", dev_info.devs);
+    }
+
+    if (dev_info.last_devs < 5) {
+        uprintf("last_devs = %s\n", dev_names[dev_info.last_devs]);
+    } else {
+        uprintf("last_devs = UNKNOWN(%d)\n", dev_info.last_devs);
+    }
+
+    uprintf("=== dev_info State End ===\n");
+}
+
+void debug_rgb_matrix_config_current(void) {
+    uprintf("=== Current rgb_matrix_config State ===\n");
+    // uprintf("dev_info.raw: 0x%08lX\n", rgb_matrix_config.raw);
+    uprintf("rgb_matrix_config.enable = %d\n", rgb_matrix_config.enable);
+    uprintf("rgb_matrix_config.mode = %d\n", rgb_matrix_config.mode);
+    uprintf("rgb_matrix_config.flags = %d\n", rgb_matrix_config.flags);
+    uprintf("rgb_matrix_config.speed = %d\n", rgb_matrix_config.speed);
+    uprintf("=== rgb_matrix_config State End ===\n");
+}
+#endif
 
 void led_config_all(void) {
     if (!led_inited) {
@@ -147,45 +233,144 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
     if (process_record_user(keycode, record) != true) {
         return false;
     }
+
     switch (keycode) {
         case RGB_TOG:
             if (record->event.pressed) {
-                if (bts_info.bt_info.low_vol) {
+                if (bts_info.bt_info.pvol <= 5) {
                     return false;
                 }
-                // dev_info.config.rgb_tog_flag = ~dev_info.config.rgb_tog_flag;
-                // if (!dev_info.config.rgb_tog_flag) {
-                if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
-                    rgb_matrix_mode(RGB_MATRIX_DEFAULT_MODE);
-                } else {
-                    if (rgb_matrix_get_flags() == LED_FLAG_ALL) {
-                        rgb_matrix_set_flags(LED_FLAG_NONE);
-                        rgb_matrix_set_color_all(0, 0, 0);
-                    } else {
-                        rgb_matrix_set_flags(LED_FLAG_ALL);
+
+                if (per_info.backlight_off) {
+                    // 开启背光
+                    per_info.backlight_off = false;
+
+                    uint8_t target_mode = per_info.saved_rgb_mode;
+                    if (target_mode > 21 || target_mode == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
+                        target_mode = rgb_matrix_config.mode;
+                        if (target_mode == RGB_MATRIX_CUSTOM_EFFECT_OFF || target_mode > 21) {
+                            target_mode = RGB_MATRIX_DEFAULT_MODE;
+                        }
                     }
+                    rgb_matrix_mode(target_mode);
+
+                } else {
+                    // 关闭背光
+                    per_info.backlight_off = true;
+
+                    uint8_t current_mode = rgb_matrix_get_mode();
+                    if (current_mode <= 21 && current_mode != RGB_MATRIX_CUSTOM_EFFECT_OFF) {
+                        per_info.saved_rgb_mode = current_mode;
+                    } else {
+                        per_info.saved_rgb_mode = RGB_MATRIX_DEFAULT_MODE;
+                    }
+                    rgb_matrix_mode(RGB_MATRIX_CUSTOM_EFFECT_OFF);
                 }
+
+                // validate_per_info_ranges();
+                eeconfig_update_kb(per_info.raw);
             }
             return false;
+
         case RGB_MOD:
             if (record->event.pressed) {
+                if (bts_info.bt_info.pvol <= 5) {
+                    return false;
+                }
+
+                // 如果背光关闭，先开启
+                if (per_info.backlight_off) {
+                    per_info.backlight_off = false;
+                    eeconfig_update_kb(per_info.raw);
+                }
+
                 rgb_matrix_step();
+                // 跳过关闭模式
                 if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
                     rgb_matrix_step();
                 }
-            }
-            return false;
-        case RGB_RMOD:
-            if (record->event.pressed) {
-                rgb_matrix_step_reverse();
-                if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
-                    rgb_matrix_step_reverse();
+
+                // 保存新模式
+                uint8_t new_mode = rgb_matrix_get_mode();
+                if (new_mode <= 21) {
+                    per_info.saved_rgb_mode = new_mode;
+                    eeconfig_update_kb(per_info.raw);
                 }
             }
             return false;
+
+        case RGB_RMOD:
+            if (record->event.pressed) {
+                if (bts_info.bt_info.pvol <= 5) {
+                    return false;
+                }
+
+                // 如果背光关闭，先开启
+                if (per_info.backlight_off) {
+                    per_info.backlight_off = false;
+                    eeconfig_update_kb(per_info.raw);
+                }
+
+                rgb_matrix_step_reverse();
+                // 跳过关闭模式
+                if (rgb_matrix_get_mode() == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
+                    rgb_matrix_step_reverse();
+                }
+
+                // 保存新模式
+                uint8_t new_mode = rgb_matrix_get_mode();
+                if (new_mode <= 21) {
+                    per_info.saved_rgb_mode = new_mode;
+                    eeconfig_update_kb(per_info.raw);
+                }
+            }
+            return false;
+
+#ifdef CONSOLE_ENABLE
+        case KC_A: {
+            if (record->event.pressed) {
+                // validate_per_info_ranges();
+                debug_per_info_current();
+            }
+            return false;
+        }
+
+        case KC_B: {
+            if (record->event.pressed) {
+                // debug_per_info_layout();
+                debug_rgb_matrix_config_current();
+            }
+            return false;
+        }
+
+        // 新增：dev_info 调试按键
+        case KC_C: {
+            if (record->event.pressed) {
+                debug_dev_info_current();
+            }
+            return false;
+        }
+
+        case KC_D: {
+            if (record->event.pressed) {
+                debug_dev_info_layout();
+            }
+            return false;
+        }
+
+        // 新增：综合调试按键
+        case KC_F: {
+            if (record->event.pressed) {
+                // debug_all_structures();
+            }
+            return false;
+        }
+#endif
+
         default:
             break;
     }
+
 #ifdef BT_MODE_ENABLE
     if (process_record_bt(keycode, record) != true) {
         return false;
@@ -201,7 +386,7 @@ void matrix_init_kb(void) {
 #endif
 
 #ifdef BT_MODE_ENABLE
-    bt_init();
+    bt_init(); // 使用新的初始化函数
     led_config_all();
 #endif
 
@@ -209,30 +394,50 @@ void matrix_init_kb(void) {
 }
 
 void keyboard_post_init_kb(void) {
-    // This is called after the keyboard matrix is initialized
-    // and the RGB matrix is initialized.
-    // It can be used to set up additional features or configurations.
+    per_info.raw = eeconfig_read_kb();
 
-    // dev_info.config.raw = eeconfig_read_kb();
+    // 验证和修复可能的无效数据
+    // validate_per_info_ranges();
+
+    // DEBUG_PRINTF("Boot: per_info.raw=0x%08lX, backlight_off=%d, saved_rgb_mode=%d\n", per_info.raw, per_info.backlight_off, per_info.saved_rgb_mode);
+
+    // 新增：开机时显示 dev_info 状态
+    DEBUG_PRINTF("Boot: dev_info.raw=0x%08lX, devs=%d, last_devs=%d\n", dev_info.raw, dev_info.devs, dev_info.last_devs);
+
+    if (per_info.backlight_off) {
+        // 用户关闭了背光，设置为关闭模式
+        rgb_matrix_mode_noeeprom(RGB_MATRIX_CUSTOM_EFFECT_OFF);
+    } else {
+        // 用户开启了背光，恢复保存的模式
+        uint8_t target_mode = per_info.saved_rgb_mode;
+        if (target_mode > 21 || target_mode == RGB_MATRIX_CUSTOM_EFFECT_OFF) {
+            target_mode = RGB_MATRIX_DEFAULT_MODE;
+        }
+        rgb_matrix_mode_noeeprom(target_mode);
+    }
 
     keyboard_post_init_user();
 }
 
 void eeconfig_init_kb(void) {
-    dev_info.config.sleep_mode = 1;
-    // eeconfig_update_user(dev_info.raw);
+    // 设置默认值
+    per_info.sleep_mode      = 1;                       // 默认睡眠模式
+    per_info.ind_brightness  = RGB_MATRIX_VAL_STEP * 3; // 默认亮度
+    per_info.smd_color_index = 0;                       // 默认颜色
+    per_info.ind_color_index = 0;                       // 默认颜色
+    per_info.backlight_off   = true;                    // 默认关闭背光
+    per_info.eco_tog_flag    = false;                   // 默认关闭省电
+    per_info.saved_rgb_mode  = RGB_MATRIX_DEFAULT_MODE; // 默认RGB模式
+    per_info.reserved        = 0;                       // 预留位清零
 
-    // dev_info.config.ind_brightness = RGB_MATRIX_DEFAULT_VAL;
-    dev_info.config.ind_brightness = RGB_MATRIX_VAL_STEP * 3;
-    // eeconfig_update_kb(dev_info.config.raw);
+    // RGB配置
+    rgb_matrix_config.hsv.h = 170;
+    rgb_matrix_config.mode  = RGB_MATRIX_CUSTOM_EFFECT_OFF;
 
-    // keymap_config.nkro = false;
-    // eeconfig_update_keymap(&keymap_config);
-    rgb_matrix_config.hsv.h         = 170;
-    dev_info.config.smd_color_index = 0;
-    eeconfig_update_user(dev_info.raw);
+    // validate_per_info_ranges(); // 验证范围
 
-    rgb_matrix_mode(RGB_MATRIX_CUSTOM_EFFECT_OFF);
+    eeconfig_update_kb(per_info.raw);
+    eeconfig_update_rgb_matrix(&rgb_matrix_config);
 
     eeconfig_init_user();
 }
@@ -240,6 +445,42 @@ void eeconfig_init_kb(void) {
 void matrix_scan_kb(void) {
 #ifdef BT_MODE_ENABLE
     bt_task();
+#endif
+
+#ifdef USB_SUSPEND_CHECK_ENABLE
+    static uint32_t usb_suspend_timer = 0;
+
+    if (dev_info.devs == DEVS_USB) {
+        if (USB_DRIVER.state == USB_SUSPENDED) {
+            // USB挂起状态
+            if (!usb_suspend_timer) {
+                // 开始计时
+                usb_suspend_timer = timer_read32();
+                dprintf("USB suspended, starting 10s timer\n");
+            } else if (timer_elapsed32(usb_suspend_timer) > 10000) {
+                // 挂起超过10秒，关闭背光
+                dprintf("USB suspended for 10s, turning off lights\n");
+
+                led_deconfig_all();
+#    ifdef ENTRY_STOP_MODE
+                // 可选：进入深度睡眠
+                // lp_system_sleep();
+#    endif
+                usb_suspend_timer = 0;
+            }
+        } else {
+            // USB活跃状态，重置计时器
+            if (usb_suspend_timer) {
+                dprintf("USB resumed, canceling suspend timer\n");
+                usb_suspend_timer = 0;
+
+                // 可选：恢复背光
+                // if (!led_inited) {
+                //     led_config_all();
+                // }
+            }
+        }
+    }
 #endif
     matrix_scan_user();
 }
@@ -270,6 +511,7 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
     if (keymap_config.no_gui) {
         rgb_matrix_set_color(74, 160, 160, 160);
     }
+
     return true;
 }
 

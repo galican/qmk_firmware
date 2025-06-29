@@ -22,16 +22,9 @@ enum bt_keycodes {
     FN_FUN,
     FN_MENU,
     SLEEP_TOGGLE,
+    WIN_LOCK,
+    RGB_TEST,
+    MAC_Spotlight,
+    MAC_Dictation,
+    MAC_Do_Not_Disturb,
 };
-
-// typedef union {
-//     uint32_t raw;
-//     struct {
-//         // uint8_t rgb_tog_flag; // RGB toggle flag
-//         uint8_t ind_color_index;
-//         uint8_t ind_brightness;
-//         uint8_t smd_color_index;
-//     };
-// } rgb_info_t;
-
-// rgb_info_t rgb_info;

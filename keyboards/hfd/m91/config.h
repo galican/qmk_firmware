@@ -12,8 +12,8 @@
 #ifdef BT_MODE_ENABLE
 #    define NO_USB_STARTUP_CHECK
 #    define ENTRY_STOP_MODE  // 超时进入STOP Mode
-#    define BT_CABLE_PIN B8  // 充电接入时为高
-#    define BT_CHARGE_PIN B9 // 充电时为低，充满时为高
+#    define BT_CABLE_PIN B9  // 充电接入时为高
+#    define BT_CHARGE_PIN B8 // 充电时为低，充满时为高
 #    define RGB_DRIVER_SDB_PIN A15
 #    define BT_HOST1_INDEX 17
 #    define BT_HOST2_INDEX 18
@@ -53,9 +53,11 @@
 #define CAPS_LOCK_IND_INDEX 105
 #define SCROLL_LOCK_IND_INDEX 106
 
-#define RGB_MATRIX_DEFAULT_VAL 144
+#define RGB_MATRIX_DEFAULT_VAL 80
 #define RGB_MATRIX_DEFAULT_SPD 192
 
 #ifdef DIP_SWITCH_ENABLE
 #    define DIP_SWITCH_PINS {B10}
 #endif
+
+#define USB_SUSPEND_CHECK_ENABLE

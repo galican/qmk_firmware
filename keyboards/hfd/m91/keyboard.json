@@ -8,12 +8,14 @@
     "usb": {
         "vid": "0xFFFE",
         "pid": "0x00AC",
-        "device_version": "1.1.6",
+        "device_version": "1.2.0",
         "suspend_wakeup_delay": 1000
     },
     "diode_direction": "ROW2COL",
     "features": {
         "bootmagic": true,
+        "command": false,
+        "console": false,
         "extrakey": true,
         "mousekey": true,
         "nkro": true,
@@ -27,8 +29,8 @@
     "rgb_matrix": {
         "driver": "is31fl3733",
         "led_count": 107,
-        "max_brightness": 180,
-        "val_steps": 36,
+        "max_brightness": 100,
+        "val_steps": 20,
         "speed_steps": 64,
         "sleep": true,
         "animations": {

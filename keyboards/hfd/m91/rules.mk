@@ -12,3 +12,5 @@ SRC += common/retarget_suspend.c
 
 RULES_MK_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 LDFLAGS += -L $(RULES_MK_DIR)/common -l_bts
+
+DEFERRED_EXEC_ENABLE = yes

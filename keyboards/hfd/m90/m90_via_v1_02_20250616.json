@@ -1,5 +1,5 @@
 {
-    "name": "M90",
+    "name": "Alchemie TKL",
     "vendorId": "0xFFFE",
     "productId": "0x00AC",
     "keycodes": ["qmk_lighting"],
@@ -67,17 +67,19 @@
         {"name":"BT_HOST3","title":"BT_HOST3","shortName":"BT_HOST3"},
         {"name":"BT_2_4G","title":"BT_2_4G","shortName":"BT_2_4G"},
         {"name":"BT_USB","title":"BT_USB","shortName":"BT_USB"},
+        {"name":"BT_VOL","title":"Query the voltage of battery","shortName":"BT_VOL"},
         {"name":"SW_OS","title":"Switch os between window and ios","shortName":"SW_OS"},
-        {"name":"INDICATOR_COLOR","title":"Change the color of LED indicator","shortName":"IND_COLOR"},
-        {"name":"INDICATOR_BRIGHTNESS_UP","title":"Increase the brightness level of LED indicator","shortName":"IND_VAI"},
-        {"name":"INDICATOR_BRIGHTNESS_DOWN","title":"Decrease the brightness level of LED indicator","shortName":"IND_VAD"},
+        {"name":"INDICATOR_HUE","title":"Change the color of LED indicator","shortName":"IND_HUE"},
+        {"name":"INDICATOR_BRIGHTNESS","title":"Increase the brightness level of LED indicator","shortName":"IND_VAL"},
         {"name":"ECO","title":"Toggle the ON/OFF state of LED indicator","shortName":"ECO"},
         {"name":"FACTORY_RESET","title":"Reset the PCB setting","shortName":"FACTORY"},
-        {"name":"KEYBOARD_RESET","title":"Reset the keyboard resetting","shortName":"KB_RESET"},
-        {"name":"BLE_RESET","title":"Reset the Bluetooth setting","shortName":"BT_RESET"},
+        {"name":"KEYBOARD_RESET","title":"Reset the keyboard resetting","shortName":"KBY_RES"},
+        {"name":"BLE_RESET","title":"Reset the Bluetooth setting","shortName":"BLE_RES"},
         {"name":"FN_FUN","title":"Swap the function keys","shortName":"FN_FUN"},
-        {"name":"FN_MENU","title":"Swap the menu and alt","shortName":"FN_MENU"}
-      ],
+        {"name":"FN_MENU","title":"Swap the menu and alt","shortName":"FN_MENU"},
+        {"name":"SLEEP_TOGGLE","title":"Switch the sleep level","shortName":"SW_SELP"},
+        {"name":"WIN_LOCK","title":"WIN key lock","shortName":"WIN_LOCK"}
+    ],
     "layouts": {
       "keymap":[
         [
@@ -273,4 +275,4 @@
         ]
       ]
     }
-  }
+}

@@ -8,7 +8,7 @@
     "usb": {
         "vid": "0xFFFE",
         "pid": "0x00AC",
-        "device_version": "1.0.2",
+        "device_version": "1.0.6",
         "suspend_wakeup_delay": 1000
     },
     "diode_direction": "ROW2COL",
@@ -29,8 +29,8 @@
     "rgb_matrix": {
         "driver": "is31fl3733",
         "led_count": 87,
-        "max_brightness": 180,
-        "val_steps": 36,
+        "max_brightness": 100,
+        "val_steps": 20,
         "speed_steps": 64,
         "sleep": true,
         "animations": {
