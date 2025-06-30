@@ -19,16 +19,16 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#define BTS_LIB_VERSION 1.1.1
+#define BTS_LIB_VERSION 1.1.2
 
 typedef enum {
   DEVS_USB = 0,
   DEVS_HOST1,
   DEVS_HOST2,
   DEVS_HOST3,
-  DEVS_2_4G,
   DEVS_HOST4,
   DEVS_HOST5,
+  DEVS_2_4G,
 } devs_t;
 
 typedef enum {
@@ -86,6 +86,7 @@ bool bts_process_keys(uint16_t keycode, bool pressed, devs_t dev_state, bool no_
 bool bts_send_fn(bool pressed);
 bool bts_send_name(devs_t host);
 bool bts_send_vendor(vbs_t cmd);
+bool bts_send_consumer(uint16_t usage);
 bool bts_send_mouse_report(uint8_t *report);
 void bts_test_report_rate_task(void);
 char* bts_get_version(void);

@@ -156,7 +156,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             return false; // Skip all further processing of this key
         }
-
+#if 0
         case LGUI(KC_TAB): {
             if (dev_info.devs) {
                 bts_process_keys(KC_LGUI, record->event.pressed, dev_info.devs, keymap_config.no_gui);
@@ -199,6 +199,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return true;
             break;
         }
+#endif
         case KC_VOLD:
             if (record->event.pressed) {
                 LCD_vol_update(false);

@@ -203,25 +203,28 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
             }
             return false;
         }
-
         case KC_VOLD:
+#if 0
             if (dev_info.devs) {
                 bts_process_keys(KC_VOLD, record->event.pressed, dev_info.devs, keymap_config.no_gui);
                 bts_task(dev_info.devs);
                 while (bts_is_busy()) {
                 }
             }
+#endif
             if (record->event.pressed) {
                 LCD_vol_update(false);
             }
             return true;
         case KC_VOLU:
+#if 0
             if (dev_info.devs) {
                 bts_process_keys(KC_VOLU, record->event.pressed, dev_info.devs, keymap_config.no_gui);
                 bts_task(dev_info.devs);
                 while (bts_is_busy()) {
                 }
             }
+#endif
             if (record->event.pressed) {
                 LCD_vol_update(true);
             }

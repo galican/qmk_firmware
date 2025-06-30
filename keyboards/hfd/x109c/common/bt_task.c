@@ -67,6 +67,8 @@ long_pressed_keys_t long_pressed_keys[] = {
   {.keycode = EE_CLR, .press_time = 0, .event_cb = long_pressed_keys_cb},
 };
 // clang-format on
+
+#if 1
 void register_mouse(uint8_t mouse_keycode, bool pressed);
 /** \brief Utilities for actions. (FIXME: Needs better description)
  *
@@ -82,12 +84,12 @@ __attribute__((weak)) void register_code(uint8_t code) {
         if (code == KC_NO) {
             return;
 
-#ifdef LOCKING_SUPPORT_ENABLE
+#    ifdef LOCKING_SUPPORT_ENABLE
         } else if (KC_LOCKING_CAPS_LOCK == code) {
-#    ifdef LOCKING_RESYNC_ENABLE
+#        ifdef LOCKING_RESYNC_ENABLE
             // Resync: ignore if caps lock already is on
             if (host_keyboard_leds() & (1 << USB_LED_CAPS_LOCK)) return;
-#    endif
+#        endif
             add_key(KC_CAPS_LOCK);
             send_keyboard_report();
             wait_ms(TAP_HOLD_CAPS_DELAY);
@@ -95,9 +97,9 @@ __attribute__((weak)) void register_code(uint8_t code) {
             send_keyboard_report();
 
         } else if (KC_LOCKING_NUM_LOCK == code) {
-#    ifdef LOCKING_RESYNC_ENABLE
+#        ifdef LOCKING_RESYNC_ENABLE
             if (host_keyboard_leds() & (1 << USB_LED_NUM_LOCK)) return;
-#    endif
+#        endif
             add_key(KC_NUM_LOCK);
             send_keyboard_report();
             wait_ms(100);
@@ -105,15 +107,15 @@ __attribute__((weak)) void register_code(uint8_t code) {
             send_keyboard_report();
 
         } else if (KC_LOCKING_SCROLL_LOCK == code) {
-#    ifdef LOCKING_RESYNC_ENABLE
+#        ifdef LOCKING_RESYNC_ENABLE
             if (host_keyboard_leds() & (1 << USB_LED_SCROLL_LOCK)) return;
-#    endif
+#        endif
             add_key(KC_SCROLL_LOCK);
             send_keyboard_report();
             wait_ms(100);
             del_key(KC_SCROLL_LOCK);
             send_keyboard_report();
-#endif
+#    endif
 
         } else if (IS_BASIC_KEYCODE(code)) {
             // TODO: should push command_proc out of this block?
@@ -132,12 +134,12 @@ __attribute__((weak)) void register_code(uint8_t code) {
             add_mods(MOD_BIT(code));
             send_keyboard_report();
 
-#ifdef EXTRAKEY_ENABLE
+#    ifdef EXTRAKEY_ENABLE
         } else if (IS_SYSTEM_KEYCODE(code)) {
             host_system_send(KEYCODE2SYSTEM(code));
         } else if (IS_CONSUMER_KEYCODE(code)) {
             host_consumer_send(KEYCODE2CONSUMER(code));
-#endif
+#    endif
 
         } else if (IS_MOUSE_KEYCODE(code)) {
             register_mouse(code, true);
@@ -159,35 +161,35 @@ __attribute__((weak)) void unregister_code(uint8_t code) {
         if (code == KC_NO) {
             return;
 
-#ifdef LOCKING_SUPPORT_ENABLE
+#    ifdef LOCKING_SUPPORT_ENABLE
         } else if (KC_LOCKING_CAPS_LOCK == code) {
-#    ifdef LOCKING_RESYNC_ENABLE
+#        ifdef LOCKING_RESYNC_ENABLE
             // Resync: ignore if caps lock already is off
             if (!(host_keyboard_leds() & (1 << USB_LED_CAPS_LOCK))) return;
-#    endif
+#        endif
             add_key(KC_CAPS_LOCK);
             send_keyboard_report();
             del_key(KC_CAPS_LOCK);
             send_keyboard_report();
 
         } else if (KC_LOCKING_NUM_LOCK == code) {
-#    ifdef LOCKING_RESYNC_ENABLE
+#        ifdef LOCKING_RESYNC_ENABLE
             if (!(host_keyboard_leds() & (1 << USB_LED_NUM_LOCK))) return;
-#    endif
+#        endif
             add_key(KC_NUM_LOCK);
             send_keyboard_report();
             del_key(KC_NUM_LOCK);
             send_keyboard_report();
 
         } else if (KC_LOCKING_SCROLL_LOCK == code) {
-#    ifdef LOCKING_RESYNC_ENABLE
+#        ifdef LOCKING_RESYNC_ENABLE
             if (!(host_keyboard_leds() & (1 << USB_LED_SCROLL_LOCK))) return;
-#    endif
+#        endif
             add_key(KC_SCROLL_LOCK);
             send_keyboard_report();
             del_key(KC_SCROLL_LOCK);
             send_keyboard_report();
-#endif
+#    endif
 
         } else if (IS_BASIC_KEYCODE(code)) {
             del_key(code);
@@ -196,18 +198,20 @@ __attribute__((weak)) void unregister_code(uint8_t code) {
             del_mods(MOD_BIT(code));
             send_keyboard_report();
 
-#ifdef EXTRAKEY_ENABLE
+#    ifdef EXTRAKEY_ENABLE
         } else if (IS_SYSTEM_KEYCODE(code)) {
             host_system_send(0);
         } else if (IS_CONSUMER_KEYCODE(code)) {
             host_consumer_send(0);
-#endif
+#    endif
 
         } else if (IS_MOUSE_KEYCODE(code)) {
             register_mouse(code, false);
         }
     }
 }
+#endif
+
 static THD_WORKING_AREA(waThread1, 128);
 static THD_FUNCTION(Thread1, arg) {
     (void)arg;
@@ -250,6 +254,8 @@ void bt_init(void) {
         writePinHigh(A14);
     }
 }
+
+#if 0
 uint16_t bt_mod_tap_pressed_time;
 uint16_t bt_mod_tap_released_time;
 uint16_t bt_mod_tap_keycode;
@@ -306,6 +312,7 @@ void     bt_modcode_send(uint16_t keycode, bool pressed) {
         }
     }
 }
+#endif
 /**
  * @brief bluetooth交互任务
  * @param event 当前事件
@@ -414,6 +421,9 @@ bool     process_record_bt(uint16_t keycode, keyrecord_t *record) {
 
     if (dev_info.devs != DEVS_USB) {
         if (retval != false) {
+            while (bts_is_busy()) {
+                wait_ms(1);
+            }
             if ((keycode > QK_MODS) && (keycode <= QK_MODS_MAX)) {
                 if (QK_MODS_GET_MODS(keycode) & 0x1) {
                     if (QK_MODS_GET_MODS(keycode) & 0x10)
@@ -636,7 +646,8 @@ uint8_t         single_blink_cnt;
 uint8_t         single_blink_index;
 uint32_t        single_blink_time;
 uint8_t         SLP_TG_CNT;
-static uint16_t bt_tap_time;
+
+// static uint16_t bt_tap_time;
 
 static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
     for (uint8_t i = 0; i < NUM_LONG_PRESS_KEYS; i++) {
@@ -734,6 +745,7 @@ static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
                 }
             }
         } break;
+#if 0
         case TO(0): { // WIN_BASE
             if (record->event.pressed) {
                 set_single_persistent_default_layer(0);
@@ -977,6 +989,7 @@ static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
                 return false; // 通过返回false阻止对该键的其它处理
             }
             return true;
+#endif
         case KC_MS_U:
             if (dev_info.devs) {
                 if (record->event.pressed) {
@@ -1241,7 +1254,7 @@ static void close_rgb(void) {
         return;
     }
     /*************************************************************************************/
-    if (timer_elapsed32(pressed_time) >= ((7 * 60 + 30) * 1000)) { // 超时，关闭灯光
+    if (timer_elapsed32(pressed_time) >= ((5 * 60 - 40) * 1000)) { // 超时，关闭灯光
         rgb_matrix_disable_noeeprom();
         LCD_command_update(LCD_SLEEP);
         extern bool LCD_DONT_SEND;
@@ -1251,7 +1264,7 @@ static void close_rgb(void) {
     }
     /*************************************************************************************/
     if (sober) {
-        if (kb_sleep_flag || (timer_elapsed32(key_press_time) >= (3 * 60 * 1000))) { // 3 minutes
+        if (kb_sleep_flag || (timer_elapsed32(key_press_time) >= ((30 * 60 - 40) * 1000))) { // 30 minutes
             bak_rgb_toggle = rgb_matrix_config.enable;
             sober          = false;
             close_rgb_time = timer_read32();
