@@ -164,3 +164,21 @@ void uart3_receive(uint8_t *data, uint16_t length) {
 bool uart3_available(void) {
     return !sdGetWouldBlock(&UART3_DRIVER);
 }
+
+void uart3_stop(void) {
+    sdStop(&UART3_DRIVER);
+    setPinInput(UART3_TX_PIN);
+    setPinInput(UART3_RX_PIN);
+}
+
+void uart3_start(void) {
+    setPinOutputPushPull(UART3_TX_PIN);
+    setPinOutputPushPull(UART3_RX_PIN);
+    writePinHigh(UART3_RX_PIN);
+    writePinHigh(UART3_TX_PIN);
+    writePinLow(UART3_TX_PIN);
+    writePinLow(UART3_RX_PIN);
+    palSetLineMode(UART3_TX_PIN, PAL_MODE_ALTERNATE(UART3_TX_PAL_MODE) | PAL_OUTPUT_TYPE_PUSHPULL | PAL_OUTPUT_SPEED_HIGHEST);
+    palSetLineMode(UART3_RX_PIN, PAL_MODE_ALTERNATE(UART3_RX_PAL_MODE) | PAL_OUTPUT_TYPE_PUSHPULL | PAL_OUTPUT_SPEED_HIGHEST);
+    sdStart(&UART3_DRIVER, &serialConfig);
+}

@@ -1256,7 +1256,7 @@ static void close_rgb(void) {
     /*************************************************************************************/
     if (timer_elapsed32(pressed_time) >= ((5 * 60 - 40) * 1000)) { // 超时，关闭灯光
         rgb_matrix_disable_noeeprom();
-        LCD_command_update(LCD_SLEEP);
+        LCD_command_update(LCD_LIGHT_SLEEP);
         extern bool LCD_DONT_SEND;
         LCD_DONT_SEND = 1;
     } else {
@@ -1280,6 +1280,7 @@ static void close_rgb(void) {
                 /* Turn off all indicators led */
                 if (led_inited) {
                     led_deconfig_all();
+                    uart3_stop();
                 }
 
 #ifdef ENTRY_STOP_MODE
@@ -1307,6 +1308,7 @@ void open_rgb(void) {
         }
         if (!led_inited) {
             led_config_all();
+            uart3_start();
         }
         sober = true;
     }

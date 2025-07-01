@@ -44,4 +44,5 @@ enum LCD_command {
     LCD_SLEEP,
     LCD_WEAKUP,
     LCD_SWITCH,
+    LCD_LIGHT_SLEEP,
 };

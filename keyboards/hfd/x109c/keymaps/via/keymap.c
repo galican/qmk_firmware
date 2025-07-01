@@ -156,67 +156,63 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             return false; // Skip all further processing of this key
         }
-#if 0
-        case LGUI(KC_TAB): {
-            if (dev_info.devs) {
-                bts_process_keys(KC_LGUI, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                bts_process_keys(KC_TAB, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
-            return true;
-            break;
-        }
-        case G(KC_E): {
-            if (dev_info.devs) {
-                bts_process_keys(KC_LGUI, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                bts_process_keys(KC_E, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
-            return true;
-            break;
-        }
-        case G(KC_SPC): {
-            if (dev_info.devs) {
-                bts_process_keys(KC_LGUI, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                bts_process_keys(KC_SPC, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
-            return true;
-            break;
-        }
-        case G(S(KC_4)): {
-            if (dev_info.devs) {
-                bts_process_keys(KC_LGUI, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                bts_process_keys(KC_LSFT, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                bts_process_keys(KC_4, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
-            return true;
-            break;
-        }
-        case G(S(KC_S)): {
-            if (dev_info.devs) {
-                bts_process_keys(KC_LGUI, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                bts_process_keys(KC_LSFT, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                bts_process_keys(KC_S, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-            }
-            return true;
-            break;
-        }
-#endif
-        case KC_VOLD:
-            if (record->event.pressed) {
-                LCD_vol_update(false);
-            }
-            return true;
-        case KC_VOLU:
-            if (record->event.pressed) {
-                LCD_vol_update(true);
-            }
-            return true;
-
+        // case LGUI(KC_TAB): {
+        //     if (dev_info.devs) {
+        //         bts_process_keys(KC_LGUI, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //         bts_process_keys(KC_TAB, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //     }
+        //     return true;
+        //     break;
+        // }
+        // case G(KC_E): {
+        //     if (dev_info.devs) {
+        //         bts_process_keys(KC_LGUI, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //         bts_process_keys(KC_E, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //     }
+        //     return true;
+        //     break;
+        // }
+        // case G(KC_SPC): {
+        //     if (dev_info.devs) {
+        //         bts_process_keys(KC_LGUI, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //         bts_process_keys(KC_SPC, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //     }
+        //     return true;
+        //     break;
+        // }
+        // case G(S(KC_4)): {
+        //     if (dev_info.devs) {
+        //         bts_process_keys(KC_LGUI, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //         bts_process_keys(KC_LSFT, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //         bts_process_keys(KC_4, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //     }
+        //     return true;
+        //     break;
+        // }
+        // case G(S(KC_S)): {
+        //     if (dev_info.devs) {
+        //         bts_process_keys(KC_LGUI, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //         bts_process_keys(KC_LSFT, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //         bts_process_keys(KC_S, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //     }
+        //     return true;
+        //     break;
+        // }
+        // case KC_VOLD:
+        //     if (record->event.pressed) {
+        //         LCD_vol_update(false);
+        //     }
+        //     return true;
+        // case KC_VOLU:
+        //     if (record->event.pressed) {
+        //         LCD_vol_update(true);
+        //     }
+        //     return true;
         case LCD_MOD: {
             if (record->event.pressed) {
                 lcd_mode_enabled = !lcd_mode_enabled;
             }
         }
-
         default:
             break;
     }

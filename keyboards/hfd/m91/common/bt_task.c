@@ -648,7 +648,7 @@ static void bt_scan_mode(void) {
         mode_sw_old_status = mode_sw_status;
 
         if (mode_sw_status) {
-            last_manual_devs           = dev_info.devs;
+            last_manual_devs           = dev_info.last_devs;
             hardware_switch_forced_usb = true;
             if (dev_info.devs != DEVS_USB) {
                 bt_switch_mode(dev_info.devs, DEVS_USB, false);

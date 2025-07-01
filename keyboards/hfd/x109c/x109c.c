@@ -49,7 +49,7 @@ void led_config_all(void) {
         // setPinOutputOpenDrain(RGB_DRIVER_SDB_PIN);
         // writePinHigh(RGB_DRIVER_SDB_PIN);
         setPinOutputPushPull(WS2812_EN_PIN);
-        writePinLow(WS2812_EN_PIN);
+        writePinHigh(WS2812_EN_PIN);
         // setPinOutput(LED_MAC_OS_PIN); // LDE2 MAC\WIN
         // writePinLow(LED_MAC_OS_PIN);
         // setPinOutput(LED_WIN_LOCK_PIN); // LED3 Win Lock
@@ -66,7 +66,7 @@ void led_deconfig_all(void) {
     if (led_inited) {
         // Set our LED pins as input
         setPinOutputPushPull(WS2812_EN_PIN);
-        writePinHigh(WS2812_EN_PIN);
+        writePinLow(WS2812_EN_PIN);
         // writePinLow(LED_CAPS_LOCK_PIN);
         // writePinLow(LED_MAC_OS_PIN);
         // writePinLow(LED_WIN_LOCK_PIN);
@@ -134,9 +134,13 @@ void set_led_state(void) {
         }
     }
     static uint16_t power_update_time;
-    if (!get_kb_sleep_flag() && timer_elapsed(power_update_time) >= 4000) {
-        power_update_time = timer_read();
+    static uint16_t query_vol_time;
+    if (!get_kb_sleep_flag() && timer_elapsed(query_vol_time) >= 4000 && bts_info.bt_info.paired) {
+        query_vol_time = timer_read();
         bts_send_vendor(v_query_vol);
+    }
+    if (timer_elapsed(power_update_time) >= 4000) {
+        power_update_time = timer_read();
         LCD_IND_update();
         LCD_charge_update();
         // LCD_DATA_receive();
@@ -164,13 +168,14 @@ void set_led_state(void) {
 bool LCD_DONT_SEND;
 void suspend_power_down_user(void) {
     // code will run multiple times while keyboard is suspended
+    led_deconfig_all();
     LCD_command_update(LCD_SLEEP);
     LCD_DONT_SEND = 1;
 }
 
 void suspend_wakeup_init_user(void) {
     // code will run on keyboard wakeup
-    // led_config_all();
+    led_config_all();
     LCD_DONT_SEND = 0;
     LCD_command_update(LCD_WEAKUP);
     set_led_state();
@@ -203,32 +208,28 @@ bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
             }
             return false;
         }
-        case KC_VOLD:
-#if 0
-            if (dev_info.devs) {
-                bts_process_keys(KC_VOLD, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                bts_task(dev_info.devs);
-                while (bts_is_busy()) {
-                }
-            }
-#endif
-            if (record->event.pressed) {
-                LCD_vol_update(false);
-            }
-            return true;
-        case KC_VOLU:
-#if 0
-            if (dev_info.devs) {
-                bts_process_keys(KC_VOLU, record->event.pressed, dev_info.devs, keymap_config.no_gui);
-                bts_task(dev_info.devs);
-                while (bts_is_busy()) {
-                }
-            }
-#endif
-            if (record->event.pressed) {
-                LCD_vol_update(true);
-            }
-            return true;
+        // case KC_VOLD:
+        //     if (dev_info.devs) {
+        //         bts_process_keys(KC_VOLD, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //         bts_task(dev_info.devs);
+        //         while (bts_is_busy()) {
+        //         }
+        //     }
+        //     if (record->event.pressed) {
+        //         LCD_vol_update(false);
+        //     }
+        //     return true;
+        // case KC_VOLU:
+        //     if (dev_info.devs) {
+        //         bts_process_keys(KC_VOLU, record->event.pressed, dev_info.devs, keymap_config.no_gui);
+        //         bts_task(dev_info.devs);
+        //         while (bts_is_busy()) {
+        //         }
+        //     }
+        //     if (record->event.pressed) {
+        //         LCD_vol_update(true);
+        //     }
+        //     return true;
         case KC_END: {
             if (record->event.pressed) {
                 extern uint8_t rgb_test_en;
@@ -268,7 +269,7 @@ void lp_recovery_hook(void) {
 void matrix_init_kb(void) {
 #ifdef WS2812_EN_PIN
     setPinOutput(WS2812_EN_PIN);
-    writePinLow(WS2812_EN_PIN);
+    writePinHigh(WS2812_EN_PIN);
 #endif
 #ifdef RGB_DRIVER_SDB_PIN
     setPinOutputOpenDrain(RGB_DRIVER_SDB_PIN);
