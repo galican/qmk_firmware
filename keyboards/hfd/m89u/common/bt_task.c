@@ -1083,7 +1083,7 @@ static void handle_factory_reset_display(void) {
                                                       : // F2 for keyboard
                             5;                          // F3 for BLE
 
-    rgb_matrix_set_color(led_index, 100, 0, 0); // Red progress indicator
+    rgb_matrix_set_color(led_index, 100, 100, 100); // White progress indicator
 }
 
 static void handle_blink_effects(void) {
