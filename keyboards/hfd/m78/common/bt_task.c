@@ -32,10 +32,7 @@ static void long_pressed_keys_cb(uint16_t keycode);
 static bool process_record_other(uint16_t keycode, keyrecord_t *record);
 static void bt_scan_mode(void);
 static void bt_used_pin_init(void);
-static void update_low_voltage_state(void);
-static void handle_factory_reset_display(void);
 static void handle_blink_effects(void);
-static void handle_layer_indication(void);
 static void handle_charging_indication(void);
 static void handle_low_battery_warning(void);
 static void handle_low_battery_shutdow(void);
@@ -61,7 +58,7 @@ extern keymap_config_t keymap_config;
 // 常量定义
 // ===========================================
 /* Wireless connection timing constants */
-#define WL_CONN_TIMEOUT_MS ((30 - 4) * 1000)     // 26 seconds
+#define WL_CONN_TIMEOUT_MS (30 * 1000)           // 30 seconds
 #define WL_PAIR_TIMEOUT_MS ((1 * 60 - 7) * 1000) // 53 seconds
 #define WL_PAIR_INTVL_MS (200)                   // 5Hz blink for pairing
 #define WL_CONN_INTVL_MS (500)                   // 2Hz blink for connecting
@@ -69,7 +66,8 @@ extern keymap_config_t keymap_config;
 #define USB_CONNECTED_LAST_MS (3 * 1000)
 
 /* Sleep and standby timeouts */
-#define LED_OFF_STANDBY_TIMEOUT_MS (5 * 60 * 1000) // 5 minutes
+#define LED_OFF_STANDBY_TIMEOUT_MS ((5 * 60 - 45) * 1000) // 5 minutes
+#define ENTRY_SLEEP_TIMEOUT_MS (30 * 60 * 1000)           // 30 minutes
 
 /* Array size calculations */
 #define NUM_LONG_PRESS_KEYS (sizeof(long_pressed_keys) / sizeof(long_pressed_keys_t))
@@ -90,6 +88,7 @@ typedef struct {
 // ===========================================
 // 全局变量
 // ===========================================
+
 uint32_t   bt_init_time = 0;
 dev_info_t dev_info     = {0};
 bts_info_t bts_info     = {
@@ -150,8 +149,6 @@ static const uint8_t rgb_test_color_table[][3] = {
 static uint8_t  rgb_test_index = 0;
 static bool     rgb_test_en    = false;
 static uint32_t rgb_test_time  = 0;
-
-const uint32_t sleep_time_table[4] = {0, 10 * 60 * 1000, 30 * 60 * 1000, 60 * 60 * 1000};
 
 // 闪烁效果相关
 static uint8_t  all_blink_cnt;
@@ -617,11 +614,6 @@ static void bt_scan_mode(void) {
 }
 
 // ===========================================
-// 低电量管理函数
-// ===========================================
-static void update_low_voltage_state(void) {}
-
-// ===========================================
 // RGB关闭函数
 // ===========================================
 static void led_off_standby(void) {
@@ -636,15 +628,19 @@ static void led_off_standby(void) {
 // 无操作休眠函数
 // ===========================================
 static void close_rgb(void) {
+    if (dev_info.sleep_mode_enabled) {
+        led_off_standby();
+    } else {
+        return; // 如果未启用休眠模式，则不处理RGB关闭
+    }
+
     if (!key_press_time) {
         key_press_time = timer_read32();
         return;
     }
 
-    led_off_standby();
-
     if (sober) {
-        if ((kb_sleep_flag || (timer_elapsed32(key_press_time) >= sleep_time_table[2] && sleep_time_table[2] != 0)) && dev_info.sleep_mode_enabled) {
+        if (kb_sleep_flag || (timer_elapsed32(key_press_time) >= ENTRY_SLEEP_TIMEOUT_MS)) {
             bak_rgb_toggle = rgb_status_save;
             sober          = false;
             close_rgb_time = timer_read32();
@@ -823,8 +819,6 @@ static void handle_usb_indicate_led(void) {
 // ===========================================
 // RGB指示器处理函数
 // ===========================================
-static void handle_factory_reset_display(void) {}
-
 static void handle_blink_effects(void) {
     // 全键闪烁
     if (all_blink_cnt) {
@@ -854,18 +848,11 @@ static void handle_blink_effects(void) {
     }
 }
 
-static void handle_layer_indication(void) {
-    // FN 按下时显示当前设备状态
-    // if ((get_highest_layer(layer_state) == 1) || (get_highest_layer(layer_state) == 3)) {
-    //     rgb_matrix_set_color(rgb_index_table[dev_info.devs], RGB_BLUE);
-    // }
-}
-
 static void handle_low_battery_warning(void) {
     static bool     Low_power_bink = false;
     static uint32_t Low_power_time = 0;
 
-    if (bts_info.bt_info.pvol <= 20) {
+    if (bts_info.bt_info.pvol <= 25) {
         rgb_matrix_set_color_all(0, 0, 0);
         if (timer_elapsed32(Low_power_time) >= 500) {
             Low_power_bink = !Low_power_bink;
@@ -956,14 +943,8 @@ static void handle_battery_query_display(void) {
 // 主RGB指示器函数
 // ===========================================
 bool bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
-    // 工厂重置显示（最高优先级）
-    handle_factory_reset_display();
-
     // 闪烁效果处理
     handle_blink_effects();
-
-    // 图层指示
-    handle_layer_indication();
 
     // 设备状态指示
     extern uint8_t factory_reset_count;
@@ -984,10 +965,9 @@ bool bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
     if (!is_charging) {
         // 非充电状态下的其他指示
         if (dev_info.devs != DEVS_USB) {
+            handle_battery_query_display();
             handle_low_battery_warning();
             handle_low_battery_shutdow();
-            handle_battery_query_display();
-            update_low_voltage_state();
         }
     }
 

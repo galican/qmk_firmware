@@ -64,8 +64,8 @@ enum __layers {
     [WIN_FN] = LAYOUT_82_ansi( /* FN */
         _______, KC_BRID,  KC_BRIU,  KC_FLEX,  KC_DESK,  KC_WBAK, KC_WSCH, KC_MPRV, KC_MPLY, KC_MNXT, KC_MUTE, KC_VOLD,    KC_VOLU, _______, _______,
         _______, BT_HOST1, BT_HOST2, BT_HOST3, BT_2_4G,  _______, _______, _______, _______, _______, _______, _______,    _______, _______,
-        RGB_TOG, RGB_MOD,  RGB_VAI,  RGB_SPI,  RGB_SAD,  RGB_HUI, _______, _______, _______, _______, _______, _______,    _______, BL_NEXT, _______, _______,
-        _______, RGB_RMOD, RGB_VAD,  RGB_SPD,  RGB_SAI,  RGB_HUD, _______, _______, _______, _______, _______, _______,             _______, _______, _______,
+        RGB_TOG, RGB_MOD,  RGB_VAI,  RGB_HUI,  RGB_SAI,  RGB_SPI, _______, _______, _______, _______, _______, _______,    _______, BL_NEXT, _______, _______,
+        _______, RGB_RMOD, RGB_VAD,  RGB_HUD,  RGB_SAD,  RGB_SPD, _______, _______, _______, _______, _______, _______,             _______, _______, _______,
         _______,           _______,  _______,  SW_OS,    _______, BT_VOL,  _______, SW_SLEP, _______, _______, _______,             _______, _______,
         _______, GU_TOGG,  _______,                               _______,                            _______, _______,    _______, _______, _______, _______),
 
@@ -80,8 +80,8 @@ enum __layers {
     [MAC_FN] = LAYOUT_82_ansi( /* mac fn */
         _______, KC_F1,    KC_F2,    KC_F3,    KC_F4,    KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,     KC_F12,  _______, _______,
         _______, BT_HOST1, BT_HOST2, BT_HOST3, BT_2_4G,  _______, _______, _______, _______, _______, _______, _______,    _______, _______,
-        RGB_TOG, RGB_MOD,  RGB_VAI,  RGB_SPI,  RGB_SAD,  RGB_HUI, _______, _______, _______, _______, _______, _______,    _______, BL_NEXT, _______, _______,
-        _______, RGB_RMOD, RGB_VAD,  RGB_SPD,  RGB_SAI,  RGB_HUD, _______, _______, _______, _______, _______, _______,             _______, _______, _______,
+        RGB_TOG, RGB_MOD,  RGB_VAI,  RGB_HUI,  RGB_SAI,  RGB_SPI, _______, _______, _______, _______, _______, _______,    _______, BL_NEXT, _______, _______,
+        _______, RGB_RMOD, RGB_VAD,  RGB_HUD,  RGB_SAD,  RGB_SPD, _______, _______, _______, _______, _______, _______,             _______, _______, _______,
         _______,           _______,  SW_OS,    _______,  _______, BT_VOL,  _______, SW_SLEP, _______, _______, _______,             _______, _______,
         _______, _______,  _______,                               _______,                            _______, _______,    _______, _______, _______, _______),
 
@@ -166,14 +166,14 @@ static void factory_reset(void) {
     eeconfig_update_keymap(&keymap_config);
 
     // 清除蓝牙配对
-    bts_send_vendor(v_clear);
-    bts_info.bt_info.pairing = false;
+    // bts_send_vendor(v_clear);
+    // bts_info.bt_info.pairing = false;
 
     dev_info.bled_mode = 0;
     eeconfig_update_user(dev_info.raw);
 
     // 重置状态指示器
-    extern uint32_t last_total_time;
+    extern uint32_t          last_total_time;
     extern indicator_state_t indicator_status;
     last_total_time  = timer_read32();
     indicator_status = INDICATOR_CONNECTING;
@@ -240,5 +240,3 @@ void matrix_scan_user(void) {
         }
     }
 }
-
-void keyboard_post_init_user() {}
