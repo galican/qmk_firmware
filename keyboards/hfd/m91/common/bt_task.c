@@ -150,7 +150,7 @@ extern void     led_deconfig_all(void);
 // 设备指示配置
 static const uint8_t rgb_index_table[]          = {BT_USB_INDEX, BT_HOST1_INDEX, BT_HOST2_INDEX, BT_HOST3_INDEX, BT_2_4G_INDEX};
 static const uint8_t rgb_index_color_table[][3] = {
-    {100, 100, 100}, {0, 0, 100}, {0, 0, 100}, {0, 0, 100}, {0, 100, 0},
+    BT_USB_COLOR, BT_HOST1_COLOR, BT_HOST2_COLOR, BT_HOST3_COLOR, BT_2_4G_COLOR,
 };
 
 static const uint8_t rgb_test_color_table[][3] = {
@@ -660,24 +660,6 @@ static void bt_scan_mode(void) {
         }
     }
 #endif
-
-#ifdef FORCE_USB
-    static bool cable_status;
-    static bool cable_old_status;
-
-    cable_status = !readPin(BT_CABLE_PIN);
-
-    if (cable_old_status != cable_status) {
-        cable_old_status = cable_status;
-        if (cable_status) {
-            if (dev_info.devs != DEVS_USB) {
-                bt_switch_mode(dev_info.devs, DEVS_USB, false);
-            }
-        } else {
-            bt_switch_mode(dev_info.devs, dev_info.last_devs, false);
-        }
-    }
-#endif
 }
 
 // ===========================================
@@ -953,7 +935,7 @@ static void handle_usb_indicate_led(void) {
                 USB_blink_time = timer_read();
             }
             if (USB_blink) {
-                rgb_matrix_set_color(rgb_index_table[DEVS_USB], 100, 100, 100);
+                rgb_matrix_set_color(rgb_index_table[DEVS_USB], rgb_index_color_table[DEVS_USB][0], rgb_index_color_table[DEVS_USB][1], rgb_index_color_table[DEVS_USB][2]);
             } else {
                 rgb_matrix_set_color(rgb_index_table[DEVS_USB], 0, 0, 0);
             }
@@ -961,7 +943,7 @@ static void handle_usb_indicate_led(void) {
         USB_switch_time = timer_read32();
     } else {
         if (timer_elapsed32(USB_switch_time) < 3000) {
-            rgb_matrix_set_color(rgb_index_table[DEVS_USB], 100, 100, 100);
+            rgb_matrix_set_color(rgb_index_table[DEVS_USB], rgb_index_color_table[DEVS_USB][0], rgb_index_color_table[DEVS_USB][1], rgb_index_color_table[DEVS_USB][2]);
         }
     }
 }
@@ -983,6 +965,7 @@ static void handle_factory_reset_display(void) {
                     per_info.ind_color_index = 0;
                     per_info.eco_tog_flag    = false;
                     eeconfig_update_kb(per_info.raw);
+                    keymap_config.nkro   = false;
                     keymap_config.no_gui = 0;
                     eeconfig_update_keymap(&keymap_config);
                     if (readPin(BT_MODE_SW_PIN) && (dev_info.devs != DEVS_USB)) {
@@ -995,8 +978,9 @@ static void handle_factory_reset_display(void) {
                     break;
 
                 case 2: // keyboard reset
-                    keymap_config.no_gui = 0;
                     eeconfig_init();
+                    keymap_config.no_gui = 0;
+                    keymap_config.nkro   = false;
                     eeconfig_update_keymap(&keymap_config);
                     break;
 

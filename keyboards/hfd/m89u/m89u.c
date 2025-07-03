@@ -281,7 +281,7 @@ void matrix_scan_kb(void) {
     } else {
         if (usb_suspend) {
             usb_suspend_timer = 0;
-            usb_suspend = false;
+            usb_suspend       = false;
             led_config_all();
         }
     }

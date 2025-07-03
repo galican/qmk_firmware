@@ -21,6 +21,13 @@
 #    define BT_2_4G_INDEX 20
 #    define BT_USB_INDEX 21
 #    define BT_MODE_SW_PIN B10
+
+// Indicate color of wl device
+#    define BT_HOST1_COLOR {0, 0, 100} // 蓝牙1指示灯颜色
+#    define BT_HOST2_COLOR {0, 0, 100} // 蓝牙2指示灯颜色
+#    define BT_HOST3_COLOR {0, 0, 100} // 蓝牙3指示灯颜色
+#    define BT_2_4G_COLOR {0, 0, 100}  // 2.4G指示灯颜色
+#    define BT_USB_COLOR {0, 0, 100}   // USB指示灯颜色
 #endif
 
 /* RGB Matrix */

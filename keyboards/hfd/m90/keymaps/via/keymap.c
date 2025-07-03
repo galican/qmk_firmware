@@ -15,10 +15,10 @@
  */
 
 #include QMK_KEYBOARD_H
+
 #include "common/bt_task.h"
 #include <lib/lib8tion/lib8tion.h>
 #include "dynamic_keymap.h"
-#include "m90.h"
 #include "uart.h"
 
 extern uint8_t sleep_time;
@@ -220,7 +220,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 per_info.ind_brightness = (per_info.ind_brightness > RGB_MATRIX_MAXIMUM_BRIGHTNESS) ? RGB_MATRIX_MAXIMUM_BRIGHTNESS : per_info.ind_brightness;
                 eeconfig_update_kb(per_info.raw);
                 if (per_info.ind_brightness == RGB_MATRIX_MAXIMUM_BRIGHTNESS) {
-                    per_info.ind_brightness = 0x00;
+                    per_info.ind_brightness = RGB_MATRIX_VAL_STEP;
                 }
             }
         }
@@ -387,17 +387,6 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     } else {
         rgb_matrix_set_color(86, 0, 0, 0);
     }
-
-    // ECO 模式处理
-    // if (per_info.eco_tog_flag) {
-    //     for (uint8_t i = 84; i < RGB_MATRIX_LED_COUNT; i++) {
-    //         rgb_matrix_set_color(i, 0, 0, 0);
-    //     }
-    // }
-
-#ifdef BT_MODE_ENABLE
-    // return bt_indicator_rgb(led_min, led_max); // 使用新的函数名
-#endif
 
     return true;
 }

@@ -221,10 +221,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             if (record->event.pressed) {
                 per_info.ind_brightness = qadd8(per_info.ind_brightness, RGB_MATRIX_VAL_STEP);
                 per_info.ind_brightness = (per_info.ind_brightness > RGB_MATRIX_MAXIMUM_BRIGHTNESS) ? RGB_MATRIX_MAXIMUM_BRIGHTNESS : per_info.ind_brightness;
-                eeconfig_update_kb(per_info.raw);
                 if (per_info.ind_brightness == RGB_MATRIX_MAXIMUM_BRIGHTNESS) {
-                    per_info.ind_brightness = 0x00;
+                    per_info.ind_brightness = RGB_MATRIX_VAL_STEP;
                 }
+                eeconfig_update_kb(per_info.raw);
             }
         }
             return false;
@@ -387,12 +387,6 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
         rgb_matrix_set_color(SCROLL_LOCK_IND_INDEX, 0, 0, 0);
     }
 
-    // if (per_info.eco_tog_flag) {
-    //     for (uint8_t i = NUM_LOCK_IND_INDEX; i < RGB_MATRIX_LED_COUNT; i++) {
-    //         rgb_matrix_set_color(i, 0, 0, 0);
-    //     }
-    // }
-
     return true;
 }
 
@@ -401,13 +395,3 @@ void keyboard_post_init_user() {
     rgb_matrix_config.hsv.s = indicator_color_tab[per_info.smd_color_index][1];
     rgb_matrix_config.hsv.v = rgb_matrix_config.hsv.v;
 }
-
-// void housekeeping_task_keychron(void) {
-//     if (is_siri_active) {
-//         if (sync_timer_elapsed32(siri_timer) >= 500) {
-//             unregister_code(KC_LCMD);
-//             unregister_code(KC_SPACE);
-//             is_siri_active = false;
-//         }
-//     }
-// }

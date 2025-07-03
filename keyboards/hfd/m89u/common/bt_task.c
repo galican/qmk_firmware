@@ -56,6 +56,14 @@ extern keymap_config_t keymap_config;
 // 结构体定义
 // ===========================================
 
+// Simple factory reset state
+typedef struct {
+    uint8_t  type;     // 1=factory, 2=keyboard, 3=ble, 0=none
+    uint8_t  progress; // 0-7 steps
+    uint32_t start_time;
+} factory_reset_t;
+static factory_reset_t factory_reset = {0};
+
 // 低电量警告状态结构体 (20%以下红色闪烁6次)
 typedef struct {
     bool     triggered;
@@ -150,7 +158,7 @@ extern void     led_deconfig_all(void);
 // 设备指示配置
 static const uint8_t rgb_index_table[]          = {BT_USB_INDEX, BT_HOST1_INDEX, BT_HOST2_INDEX, BT_HOST3_INDEX, BT_2_4G_INDEX};
 static const uint8_t rgb_index_color_table[][3] = {
-    {100, 100, 100}, {0, 0, 200}, {0, 0, 200}, {0, 0, 200}, {0, 200, 0},
+    BT_USB_COLOR, BT_HOST1_COLOR, BT_HOST2_COLOR, BT_HOST3_COLOR, BT_2_4G_COLOR,
 };
 
 static const uint8_t rgb_test_color_table[][3] = {
@@ -166,11 +174,6 @@ static uint32_t rgb_test_time  = 0;
 static bool rgb_status_save = 1;
 
 const uint32_t sleep_time_table[4] = {0, 10 * 60 * 1000, 30 * 60 * 1000, 60 * 60 * 1000};
-
-// 工厂重置相关
-static uint32_t factory_reset_press_time = 0;
-static uint8_t  factory_reset_status;
-static uint8_t  factory_reset_press_cnt;
 
 // 闪烁效果相关
 static uint8_t  all_blink_cnt;
@@ -598,14 +601,18 @@ static void long_pressed_keys_cb(uint16_t keycode) {
         case FACTORY_RESET:
         case KEYBOARD_RESET:
         case BLE_RESET: {
-            if (!factory_reset_status) {
-                factory_reset_status    = (keycode == FACTORY_RESET) ? 1 : (keycode == KEYBOARD_RESET) ? 2 : 3;
-                factory_reset_press_cnt = 1;
-                rgb_matrix_enable_noeeprom();
-                rgb_status_save          = rgb_matrix_config.enable;
-                factory_reset_press_time = timer_read32();
+            if (!factory_reset.type) {
+                factory_reset.type       = (keycode == FACTORY_RESET) ? 1 : (keycode == KEYBOARD_RESET) ? 2 : 3;
+                factory_reset.progress   = 0;
+                factory_reset.start_time = timer_read32();
+
+                // Enable RGB for indication
+                if (!rgb_matrix_config.enable) {
+                    rgb_matrix_enable_noeeprom();
+                }
             }
-        } break;
+            break;
+        }
 
         case RGB_TEST: {
             if (rgb_test_en != true) {
@@ -654,7 +661,7 @@ static void bt_scan_mode(void) {
         mode_sw_old_status = mode_sw_status;
 
         if (mode_sw_status) {
-            last_manual_devs           = dev_info.devs;
+            last_manual_devs           = dev_info.last_devs;
             hardware_switch_forced_usb = true;
             if (dev_info.devs != DEVS_USB) {
                 bt_switch_mode(dev_info.devs, DEVS_USB, false);
@@ -959,7 +966,7 @@ static void handle_usb_indicate_led(void) {
                 USB_blink_time = timer_read();
             }
             if (USB_blink) {
-                rgb_matrix_set_color(rgb_index_table[DEVS_USB], 100, 100, 100);
+                rgb_matrix_set_color(rgb_index_table[DEVS_USB], rgb_index_color_table[DEVS_USB][0], rgb_index_color_table[DEVS_USB][1], rgb_index_color_table[DEVS_USB][2]);
             } else {
                 rgb_matrix_set_color(rgb_index_table[DEVS_USB], 0, 0, 0);
             }
@@ -967,97 +974,83 @@ static void handle_usb_indicate_led(void) {
         USB_switch_time = timer_read32();
     } else {
         if (timer_elapsed32(USB_switch_time) < 3000) {
-            rgb_matrix_set_color(rgb_index_table[DEVS_USB], 100, 100, 100);
+            rgb_matrix_set_color(rgb_index_table[DEVS_USB], rgb_index_color_table[DEVS_USB][0], rgb_index_color_table[DEVS_USB][1], rgb_index_color_table[DEVS_USB][2]);
         }
     }
 }
 
 // ===========================================
-// RGB指示器处理函数
+// Factory Reset Functions start
 // ===========================================
-static void handle_factory_reset_display(void) {
-    if (factory_reset_status) {
-        if (timer_elapsed32(factory_reset_press_time) >= factory_reset_press_cnt * 500) {
-            factory_reset_press_cnt++;
-        }
 
-        if (factory_reset_press_cnt >= 7) {
-            switch (factory_reset_status) {
-                case 1: // factory reset
-                    eeconfig_init();
-                    per_info.ind_brightness  = RGB_MATRIX_VAL_STEP * 3;
-                    per_info.ind_color_index = 0;
-                    per_info.eco_tog_flag    = false;
-                    eeconfig_update_kb(per_info.raw);
-                    // keymap_config.no_gui = 0;
-                    // eeconfig_update_keymap(&keymap_config);
-                    keymap_config.nkro = false;
-                    eeconfig_update_keymap(&keymap_config);
-                    {
-                        rgb_matrix_config.hsv.h = 170;
-                        rgb_matrix_config.mode  = RGB_MATRIX_CUSTOM_EFFECT_OFF;
-                    }
-                    // eeconfig_update_rgb_matrix_default();
-                    if (readPin(BT_MODE_SW_PIN) && (dev_info.devs != DEVS_USB)) {
-                        bts_send_vendor(v_clear);
-                        bts_info.bt_info.pairing = false;
-                        bt_switch_mode(DEVS_HOST1, DEVS_USB, false);
-                        last_total_time  = timer_read32();
-                        indicator_status = 2;
-                    }
-                    break;
-
-                case 2: // keyboard reset
-                    eeconfig_init();
-                    keymap_config.nkro = false;
-                    eeconfig_update_keymap(&keymap_config);
-                    {
-                        rgb_matrix_config.hsv.h = 170;
-                        rgb_matrix_config.mode  = RGB_MATRIX_CUSTOM_EFFECT_OFF;
-                    }
-                    // eeconfig_update_rgb_matrix_default();
-                    break;
-
-                case 3: // ble reset
-                    if (readPin(BT_MODE_SW_PIN) && (dev_info.devs != DEVS_USB) && (dev_info.devs != DEVS_2_4G)) {
-                        bts_send_vendor(v_clear);
-                        bts_info.bt_info.pairing = false;
-                        bt_switch_mode(dev_info.devs, DEVS_HOST1, false);
-                        last_total_time  = timer_read32();
-                        indicator_status = 2;
-                    }
-                    break;
-                default:
-                    break;
+static void execute_factory_reset(void) {
+    switch (factory_reset.type) {
+        case 1: // Factory reset
+            eeconfig_init();
+            per_info.ind_brightness  = RGB_MATRIX_VAL_STEP * 3;
+            per_info.ind_color_index = 0;
+            per_info.eco_tog_flag    = false;
+            eeconfig_update_kb(per_info.raw);
+            keymap_config.nkro = false;
+            eeconfig_update_keymap(&keymap_config);
+            {
+                rgb_matrix_config.hsv.h = 170;
+                rgb_matrix_config.mode  = RGB_MATRIX_CUSTOM_EFFECT_OFF;
             }
-            factory_reset_press_cnt  = 0;
-            factory_reset_status     = 0;
-            factory_reset_press_time = 0;
-        }
-
-        rgb_matrix_set_color_all(0, 0, 0);
-        static uint8_t reset_leds[][3] = {{13}, {12}, {16, 17, 18}};
-        if (factory_reset_status >= 1 && factory_reset_status <= 3) {
-            switch (factory_reset_status) {
-                case 1: {
-                    rgb_matrix_set_color(reset_leds[factory_reset_status - 1][0], 100, 100, 100);
-                    break;
-                }
-                case 2: {
-                    rgb_matrix_set_color(reset_leds[factory_reset_status - 1][0], 100, 100, 100);
-                    break;
-                }
-                case 3: {
-                    for (uint8_t i = 0; i < 3; i++) {
-                        rgb_matrix_set_color(reset_leds[factory_reset_status - 1][i], 100, 100, 100);
-                    }
-                    break;
-                }
-                default:
-                    break;
+            if (readPin(BT_MODE_SW_PIN) && (dev_info.devs != DEVS_USB)) {
+                bts_send_vendor(v_clear);
+                bts_info.bt_info.pairing = false;
+                bt_switch_mode(DEVS_HOST1, DEVS_USB, false);
+                last_total_time  = timer_read32();
+                indicator_status = 2;
             }
-        }
+            break;
+
+        case 2: // Keyboard reset
+            eeconfig_init();
+            keymap_config.nkro = false;
+            eeconfig_update_keymap(&keymap_config);
+            {
+                rgb_matrix_config.hsv.h = 170;
+                rgb_matrix_config.mode  = RGB_MATRIX_CUSTOM_EFFECT_OFF;
+            }
+            break;
+
+        case 3: // BLE reset
+            if (readPin(BT_MODE_SW_PIN) && (dev_info.devs != DEVS_USB) && (dev_info.devs != DEVS_2_4G)) {
+                bts_send_vendor(v_clear);
+                bts_info.bt_info.pairing = false;
+                bt_switch_mode(dev_info.devs, DEVS_HOST1, false);
+                last_total_time  = timer_read32();
+                indicator_status = 2;
+            }
+            break;
     }
+}
+
+static void handle_factory_reset_display(void) {
+    if (!factory_reset.type) return;
+
+    // Update progress based on time
+    uint32_t elapsed       = timer_elapsed32(factory_reset.start_time);
+    factory_reset.progress = (elapsed / 500) + 1; // 500ms per step
+
+    // Execute reset at step 7
+    if (factory_reset.progress >= 7) {
+        execute_factory_reset();
+        factory_reset.type = 0; // Reset state
+        return;
+    }
+
+    // Show progress: turn off all LEDs, light up the reset type LED
+    rgb_matrix_set_color_all(0, 0, 0);
+
+    uint8_t led_index = (factory_reset.type == 1) ? 7 : // F1 for factory
+                            (factory_reset.type == 2) ? 6
+                                                      : // F2 for keyboard
+                            5;                          // F3 for BLE
+
+    rgb_matrix_set_color(led_index, 100, 0, 0); // Red progress indicator
 }
 
 static void handle_blink_effects(void) {
@@ -1236,7 +1229,7 @@ static void handle_battery_query_display(void) {
 // ===========================================
 bool bt_indicator_rgb(uint8_t led_min, uint8_t led_max) {
     // 工厂重置显示（最高优先级）
-    if (factory_reset_status) {
+    if (factory_reset.type) {
         handle_factory_reset_display();
         return false;
     }
