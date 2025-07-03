@@ -223,6 +223,7 @@ void eeconfig_init_kb(void) {
     per_info.backlight_off   = true;                    // 默认关闭背光
     per_info.eco_tog_flag    = false;                   // 默认关闭省电
     per_info.saved_rgb_mode  = RGB_MATRIX_DEFAULT_MODE; // 默认RGB模式
+    per_info.manual_usb_mode = false;                   //
     per_info.reserved        = 0;                       // 预留位清零
 
     // RGB配置

@@ -8,10 +8,11 @@
  * @copyright Copyright (c) 2023 Westberry Technology Corp., Ltd
  */
 
+#include QMK_KEYBOARD_H
+
 #include "common/bts_lib.h"
 #include "config.h"
 #include "gpio.h"
-#include "m91.h"
 #include "quantum.h"
 #include "rgb_matrix.h"
 #include "uart.h"
@@ -44,6 +45,10 @@ static void handle_low_battery_shutdow(void);
 static void handle_battery_query_display(void);
 static void handle_bt_indicate_led(void);
 static void handle_usb_indicate_led(void);
+static bool is_switch_forcing_wired_mode(void);
+static bool is_wireless_mode_keycode(uint16_t keycode);
+static bool is_current_mode_wireless(void);
+static bool is_current_mode_wireless_by_devs(uint8_t devs);
 #ifdef RGB_MATRIX_ENABLE
 static void led_off_standby(void);
 static void open_rgb(void);
@@ -116,9 +121,6 @@ bts_info_t bts_info     = {
         .timer_read32   = timer_read32,
 };
 
-// 硬件开关状态
-static bool    hardware_switch_forced_usb = false;
-static uint8_t last_manual_devs           = DEVS_HOST1;
 // clang-format off
 // 长按键配置
 long_pressed_keys_t long_pressed_keys[] = {
@@ -216,26 +218,19 @@ void bt_init(void) {
     dev_info.raw = eeconfig_read_user();
     if (!dev_info.raw) {
         dev_info.devs      = DEVS_USB;
-        dev_info.last_devs = DEVS_HOST1;
+        dev_info.last_devs = DEVS_USB;
         eeconfig_update_user(dev_info.raw);
     }
 
-    // 初始化手动设备选择记录
-    if (dev_info.last_devs != DEVS_USB && dev_info.last_devs <= DEVS_2_4G) {
-        last_manual_devs = dev_info.last_devs;
-    } else {
-        last_manual_devs = DEVS_HOST1;
-    }
-
-    // 检查硬件开关初始状态
     bool switch_on = !readPin(BT_MODE_SW_PIN);
     if (switch_on) {
-        hardware_switch_forced_usb = true;
+        // Hardware switch is ON -> Force wired mode
         if (dev_info.devs != DEVS_USB) {
             dev_info.devs = DEVS_USB;
         }
-    } else {
-        hardware_switch_forced_usb = false;
+        // Clear manual USB flag since this is hardware-forced
+        // per_info.manual_usb_mode = false;
+        // eeconfig_update_kb(per_info.raw);
     }
 
     bt_init_time = timer_read32();
@@ -481,11 +476,9 @@ static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
         }
     }
 
-    // 硬件开关检查
-    if (!readPin(BT_MODE_SW_PIN)) {
-        if (keycode == BT_HOST1 || keycode == BT_HOST2 || keycode == BT_HOST3 || keycode == BT_2_4G) {
-            return false;
-        }
+    // Hardware switch check - prevent wireless mode selection when switch forces wired
+    if (is_switch_forcing_wired_mode() && is_wireless_mode_keycode(keycode)) {
+        return false; // Block wireless mode keys when hardware switch forces wired mode
     }
 
     switch (keycode) {
@@ -496,17 +489,14 @@ static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
         case BT_USB: {
             if (record->event.pressed) {
                 uint8_t target_devs = (keycode == BT_HOST1) ? DEVS_HOST1 : (keycode == BT_HOST2) ? DEVS_HOST2 : (keycode == BT_HOST3) ? DEVS_HOST3 : (keycode == BT_2_4G) ? DEVS_2_4G : DEVS_USB;
-
-                if (hardware_switch_forced_usb && target_devs != DEVS_USB) {
-                    last_manual_devs = target_devs;
-                    return false;
-                }
-
-                if (target_devs != DEVS_USB) {
-                    last_manual_devs = target_devs;
-                }
-
                 if (dev_info.devs != target_devs) {
+                    // Track if user manually selected USB mode
+                    if (target_devs == DEVS_USB) {
+                        per_info.manual_usb_mode = true;
+                    } else {
+                        per_info.manual_usb_mode = false; // User selected wireless mode
+                    }
+                    eeconfig_update_kb(per_info.raw);
                     bt_switch_mode(dev_info.devs, target_devs, false);
                 }
             }
@@ -624,6 +614,48 @@ static void long_pressed_keys_hook(void) {
 }
 
 // ===========================================
+// Helper functions for hardware switch
+// ===========================================
+
+/**
+ * @brief Check if hardware switch is forcing wired mode
+ * @return true if switch is ON (forcing wired mode), false if switch is OFF (allowing all modes)
+ */
+static bool is_switch_forcing_wired_mode(void) {
+#ifdef BT_MODE_SW_PIN
+    return !readPin(BT_MODE_SW_PIN); // Switch ON = false reading = force wired
+#else
+    return false; // No switch = allow all modes
+#endif
+}
+
+/**
+ * @brief Check if a keycode is for a wireless mode
+ * @param keycode The keycode to check
+ * @return true if keycode is for wireless mode (BT1, BT2, BT3, 2.4G)
+ */
+static bool is_wireless_mode_keycode(uint16_t keycode) {
+    return (keycode == BT_HOST1 || keycode == BT_HOST2 || keycode == BT_HOST3 || keycode == BT_2_4G);
+}
+
+/**
+ * @brief Check if current device mode is wireless
+ * @return true if current mode is wireless
+ */
+static bool is_current_mode_wireless(void) {
+    return (dev_info.devs >= DEVS_HOST1 && dev_info.devs <= DEVS_2_4G);
+}
+
+/**
+ * @brief Check if a given device mode is wireless
+ * @param devs The device mode to check
+ * @return true if the given mode is wireless
+ */
+static bool is_current_mode_wireless_by_devs(uint8_t devs) {
+    return (devs >= DEVS_HOST1 && devs <= DEVS_2_4G);
+}
+
+// ===========================================
 // 硬件管理函数
 // ===========================================
 static void bt_used_pin_init(void) {
@@ -639,25 +671,44 @@ static void bt_used_pin_init(void) {
 
 static void bt_scan_mode(void) {
 #ifdef BT_MODE_SW_PIN
-    static bool mode_sw_status     = 0;
-    static bool mode_sw_old_status = 0;
+    static bool last_switch_state = true; // Track previous switch state
 
-    mode_sw_status = !readPin(BT_MODE_SW_PIN);
+    bool switch_state = readPin(BT_MODE_SW_PIN); // false = switch ON (force wired), true = switch OFF (allow all modes)
 
-    if (mode_sw_old_status != mode_sw_status) {
-        mode_sw_old_status = mode_sw_status;
+    // Handle switch state changes
+    if (last_switch_state != switch_state) {
+        last_switch_state = switch_state;
 
-        if (mode_sw_status) {
-            last_manual_devs           = dev_info.last_devs;
-            hardware_switch_forced_usb = true;
+        if (is_switch_forcing_wired_mode()) {
+            // Switch turned ON -> Force wired mode immediately
             if (dev_info.devs != DEVS_USB) {
+                // Save current wireless mode for restoration when switch turns OFF
+                if (is_current_mode_wireless()) {
+                    dev_info.last_devs = dev_info.devs;
+                }
                 bt_switch_mode(dev_info.devs, DEVS_USB, false);
+                per_info.manual_usb_mode = false; // This is a forced switch, not manual
+                eeconfig_update_kb(per_info.raw);
             }
         } else {
-            hardware_switch_forced_usb = false;
-            uint8_t target_devs        = last_manual_devs;
-            bt_switch_mode(DEVS_USB, target_devs, false);
+            // Switch turned OFF -> Restore last wireless mode ONLY if it was wireless AND USB wasn't manually selected
+            if (dev_info.devs == DEVS_USB && is_current_mode_wireless_by_devs(dev_info.last_devs) && !per_info.manual_usb_mode) {
+                // Only auto-switch back if:
+                // 1. Currently in USB mode
+                // 2. Last mode was wireless
+                // 3. USB mode wasn't manually selected by user
+                bt_switch_mode(dev_info.devs, dev_info.last_devs, false);
+            }
+            // If USB was manually selected or last mode was USB, stay in USB mode
         }
+    }
+
+    // Continuously enforce hardware switch restriction when ON
+    if (is_switch_forcing_wired_mode() && dev_info.devs != DEVS_USB) {
+        // Hardware switch is ON -> force USB mode (handles any edge cases)
+        bt_switch_mode(dev_info.devs, DEVS_USB, false);
+        per_info.manual_usb_mode = false; // This is a forced switch, not manual
+        eeconfig_update_kb(per_info.raw);
     }
 #endif
 }

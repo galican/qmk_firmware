@@ -48,7 +48,8 @@ typedef union PACKED {
         uint8_t saved_rgb_mode : 5;  // 0-31 (22种，0-21有效)
         bool    backlight_off : 1;   // 0-1
         bool    eco_tog_flag : 1;    // 0-1
-        uint8_t reserved : 7;        // 剩余7位预留
+        bool    manual_usb_mode : 1; // 0-1
+        uint8_t reserved : 6;        // 剩余6位预留
     };
 } per_info_t;
 
