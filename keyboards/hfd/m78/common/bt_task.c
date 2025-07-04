@@ -826,7 +826,7 @@ static void handle_low_battery_warning(void) {
     static bool     Low_power_bink = false;
     static uint32_t Low_power_time = 0;
 
-    if (bts_info.bt_info.pvol <= 28) {
+    if (bts_info.bt_info.low_vol) {
         rgb_matrix_set_color_all(0, 0, 0);
         if (timer_elapsed32(Low_power_time) >= 500) {
             Low_power_bink = !Low_power_bink;
@@ -869,7 +869,7 @@ static void handle_charging_indication(void) {
 
 static void handle_low_battery_shutdow(void) {
     extern bool low_vol_offed_sleep;
-    if (bts_info.bt_info.low_vol) {
+    if (bts_info.bt_info.low_vol_offed) {
         kb_sleep_flag       = true;
         low_vol_offed_sleep = true;
     }
