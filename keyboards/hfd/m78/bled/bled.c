@@ -69,7 +69,7 @@ void bled_task(void) {
             // uint8_t raw_brightness = sin8(breath_step);
 
             // 方案1：使用三角波函数，更平滑的过渡
-            uint8_t brightness = scale8(triwave8(breath_step), 200) + 55; // 55-255范围
+            uint8_t brightness = scale8(triwave8(breath_step), 200) + 1; // 55-255范围
 
             // 方案2：或者使用双重缓动，更自然
             // uint8_t brightness = scale8(ease8InOutCubic(sin8(breath_step)), 180) + 75;
@@ -83,6 +83,8 @@ void bled_task(void) {
             //     // 呼气阶段：快结束
             //     brightness = scale8(ease8OutQuad((255 - raw_brightness) * 2), 200) + 55;
             // }
+            // uint16_t time       = scale16by8(g_rgb_timer, breath_step / 8);
+            // uint8_t  brightness = scale8(abs8(sin8(time) - 128) * 2, 200);
 
             // 彩虹呼吸 or 固定色呼吸
             uint8_t base_hue = 0;

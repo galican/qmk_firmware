@@ -7,8 +7,8 @@
 // 灯效模式枚举
 typedef enum {
     BLED_MODE_CYCLE_LEFT_TO_RIGHT, // 流光
-    BLED_MODE_NEON,                // 霓虹
     BLED_MODE_BREATHING,           // 呼吸
+    BLED_MODE_NEON,                // 霓虹
     BLED_MODE_ON_YELLOW,           // 单色黄
     BLED_MODE_ON_BLUE,             // 单色蓝
     BLED_MODE_ON_PINK,             // 单色粉

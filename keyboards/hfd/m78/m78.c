@@ -136,14 +136,15 @@ bool rgb_matrix_indicators_advanced_kb(uint8_t led_min, uint8_t led_max) {
         bled_task();
     }
 
-    if (rgb_matrix_indicators_advanced_user(led_min, led_max) != true) {
-        return false;
-    }
-
 #ifdef BT_MODE_ENABLE
     if (bt_indicator_rgb(led_min, led_max) != true) {
         return false;
     }
 #endif
+
+    if (rgb_matrix_indicators_advanced_user(led_min, led_max) != true) {
+        return false;
+    }
+
     return true;
 }
