@@ -83,7 +83,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         RGB_HUI, RGB_VAI, RGB_MOD, RGB_SAI,
         BT_2_4G, BT_USB,  RGB_SPI, _______,
         BT_HOST1,BT_HOST2,BT_HOST3,_______,
-        SW_OS,   RGB_TEST
+        _______, RGB_TEST
     ),
 
     [PAD_A_FN] = LAYOUT_numpad_6x4(
@@ -92,7 +92,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         RGB_HUI, RGB_VAI, RGB_MOD, RGB_SAI,
         BT_2_4G, BT_USB,  RGB_SPI, _______,
         BT_HOST1,BT_HOST2,BT_HOST3,_______,
-        SW_OS,   RGB_TEST
+        _______, RGB_TEST
     )
 };
 
@@ -291,14 +291,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 }
                 eeconfig_update_kb(per_info.raw);
             }
-        }
             return false;
-
-        // case CUSTOM_DOT:
-        //     if (record->event.pressed) {
-        //         send_string("."); // 直接发送点号字符
-        //     }
-        //     return false;
+        }
 
         default: {
             // 处理其他按键

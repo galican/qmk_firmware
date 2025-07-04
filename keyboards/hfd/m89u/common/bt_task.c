@@ -530,29 +530,6 @@ static bool process_record_other(uint16_t keycode, keyrecord_t *record) {
             return true;
         }
 
-        case SW_OS: {
-            if (record->event.pressed) {
-                static bool os_switch = false;
-                if (!os_switch) {
-                    // set_single_persistent_default_layer(2);
-                    // keymap_config.no_gui = 0;
-                    // eeconfig_update_keymap(&keymap_config);
-                    os_switch          = true;
-                    single_blink_index = 20;
-                    single_blink_time  = timer_read32();
-                    single_blink_cnt   = 6;
-                    single_blink_color = (RGB){0, 0, 200};
-                } else if (os_switch) {
-                    // set_single_persistent_default_layer(0);
-                    os_switch          = false;
-                    single_blink_index = 20;
-                    single_blink_time  = timer_read32();
-                    single_blink_cnt   = 6;
-                    single_blink_color = (RGB){0, 200, 0};
-                }
-            }
-        } break;
-
         case RGB_TEST: {
             if (record->event.pressed) {
                 if (rgb_test_en) {
